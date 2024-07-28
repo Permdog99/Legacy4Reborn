@@ -1,5 +1,6 @@
 package wily.legacy.mixin;
 
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -11,6 +12,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import wily.legacy.Legacy4J;
+import wily.legacy.Legacy4JClient;
 import wily.legacy.inventory.LegacySlotDisplay;
 
 @Mixin(ChestMenu.class)
@@ -21,16 +24,31 @@ public abstract class ChestMenuMixin extends AbstractContainerMenu {
     }
     @ModifyArg(method = "<init>(Lnet/minecraft/world/inventory/MenuType;ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/Container;I)V",at = @At(value = "INVOKE",target = "Lnet/minecraft/world/inventory/ChestMenu;addSlot(Lnet/minecraft/world/inventory/Slot;)Lnet/minecraft/world/inventory/Slot;", ordinal = 0))
     private Slot addSlotFirst(Slot originalSlot){
-        return LegacySlotDisplay.override(originalSlot, 14 + originalSlot.getContainerSlot() % 9 * 21,26 + originalSlot.getContainerSlot() / 9 * 21);
+        return LegacySlotDisplay.override(originalSlot, 14 + originalSlot.getContainerSlot() % 9 * 21,26 + originalSlot.getContainerSlot() / 9 * 21, new LegacySlotDisplay() {
+            @Override
+            public IconHolderOverride getIconHolderOverride() {
+                return Legacy4JClient.ICON_HOLDER_360;
+            }
+        });
     }
     @Redirect(method = "<init>(Lnet/minecraft/world/inventory/MenuType;ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/Container;I)V",at = @At(value = "INVOKE",target = "Lnet/minecraft/world/inventory/ChestMenu;addSlot(Lnet/minecraft/world/inventory/Slot;)Lnet/minecraft/world/inventory/Slot;", ordinal = 1))
     private Slot addInventorySlots(ChestMenu instance, Slot originalSlot, MenuType<?> menuType, int i, Inventory inventory, Container container, int j){
         int k = (j - 3) * 21;
-        return addSlot(LegacySlotDisplay.override(originalSlot, 14 + (originalSlot.getContainerSlot() - 9) % 9 * 21,107 + (originalSlot.getContainerSlot() - 9) / 9 * 21 + k));
+        return addSlot(LegacySlotDisplay.override(originalSlot, 14 + (originalSlot.getContainerSlot() - 9) % 9 * 21,107 + (originalSlot.getContainerSlot() - 9) / 9 * 21 + k, new LegacySlotDisplay() {
+            @Override
+            public IconHolderOverride getIconHolderOverride() {
+                return Legacy4JClient.ICON_HOLDER_360;
+            }
+        }));
     }
     @Redirect(method = "<init>(Lnet/minecraft/world/inventory/MenuType;ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/Container;I)V",at = @At(value = "INVOKE",target = "Lnet/minecraft/world/inventory/ChestMenu;addSlot(Lnet/minecraft/world/inventory/Slot;)Lnet/minecraft/world/inventory/Slot;", ordinal = 2))
     private Slot addHotbarSlots(ChestMenu instance, Slot originalSlot, MenuType<?> menuType, int i, Inventory inventory, Container container, int j){
         int k = (j - 3) * 21;
-        return addSlot(LegacySlotDisplay.override(originalSlot, 14 + originalSlot.getContainerSlot() * 21,177 + k));
+        return addSlot(LegacySlotDisplay.override(originalSlot, 14 + originalSlot.getContainerSlot() * 21,177 + k, new LegacySlotDisplay() {
+            @Override
+            public IconHolderOverride getIconHolderOverride() {
+                return Legacy4JClient.ICON_HOLDER_360;
+            }
+        }));
     }
 }

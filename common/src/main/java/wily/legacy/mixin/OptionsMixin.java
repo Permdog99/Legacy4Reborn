@@ -1,16 +1,18 @@
 package wily.legacy.mixin;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.serialization.Codec;
-import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.OptionInstance;
-import net.minecraft.client.Options;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.*;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.renderer.GpuWarnlistManager;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.Difficulty;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -27,7 +29,10 @@ import wily.legacy.network.PlayerInfoSync;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.List;
 import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Mixin(Options.class)
 public abstract class OptionsMixin implements LegacyOptions {
@@ -102,6 +107,7 @@ public abstract class OptionsMixin implements LegacyOptions {
     private OptionInstance<Boolean> smoothAnimatedCharacter;
     private OptionInstance<Integer> selectedControllerHandler;
     private OptionInstance<Boolean> autoResolution;
+    private OptionInstance<Boolean> developerMode;
 
     @ModifyArg(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/KeyMapping;<init>(Ljava/lang/String;ILjava/lang/String;)V", ordinal = 5),index = 0)
     protected String initKeyCraftingName(String string) {
@@ -163,19 +169,20 @@ public abstract class OptionsMixin implements LegacyOptions {
         leftTriggerDeadZone = new OptionInstance<>("legacy.options.leftTriggerDeadZone", OptionInstance.noTooltip(), OptionsMixin::percentValueLabel, OptionInstance.UnitDouble.INSTANCE, 0.2, d -> {});
         rightTriggerDeadZone = new OptionInstance<>("legacy.options.rightTriggerDeadZone", OptionInstance.noTooltip(), OptionsMixin::percentValueLabel, OptionInstance.UnitDouble.INSTANCE, 0.2, d -> {});
         hudScale = new OptionInstance<>("legacy.options.hudScale", OptionInstance.noTooltip(), OptionsMixin::genericValueLabel,  new OptionInstance.IntRange(1,3), 2, d -> {});
-        hudOpacity = new OptionInstance<>("legacy.options.hudOpacity", OptionInstance.noTooltip(), OptionsMixin::percentValueLabel, OptionInstance.UnitDouble.INSTANCE, 0.8, d -> {});
+        hudOpacity = new OptionInstance<>("legacy.options.hudOpacity", OptionInstance.noTooltip(), OptionsMixin::percentValueLabel, OptionInstance.UnitDouble.INSTANCE, 1.0, d -> {});
         hudDistance = new OptionInstance<>("legacy.options.hudDistance", OptionInstance.noTooltip(), OptionsMixin::percentValueLabel, OptionInstance.UnitDouble.INSTANCE, 1.0, d -> {});
         interfaceResolution = new OptionInstance<>("legacy.options.interfaceResolution", OptionInstance.noTooltip(), (c, d) -> percentValueLabel(c, 0.25 + d * 1.5), OptionInstance.UnitDouble.INSTANCE, 0.5, d -> minecraft.resizeDisplay());
         interfaceSensitivity = new OptionInstance<>("legacy.options.interfaceSensitivity", OptionInstance.noTooltip(), (c, d) -> percentValueLabel(c, d*2), OptionInstance.UnitDouble.INSTANCE, 0.5, d -> {});
-        overrideTerrainFogStart = OptionInstance.createBoolean("legacy.options.overrideTerrainFogStart", true);
+        overrideTerrainFogStart = OptionInstance.createBoolean("legacy.options.overrideTerrainFogStart", false);
         terrainFogStart = new OptionInstance<>("legacy.options.terrainFogStart", OptionInstance.noTooltip(),(c,i)-> Component.translatable("options.chunks", i), new OptionInstance.ClampingLazyMaxIntRange(2, () -> renderDistance().get(), 0x7FFFFFFE), 4, d -> {});
         terrainFogEnd = new OptionInstance<>("legacy.options.terrainFogEnd", OptionInstance.noTooltip(),(c, d) -> percentValueLabel(c, d*2), OptionInstance.UnitDouble.INSTANCE, 0.5, d -> {});
         selectedControlIcons = new OptionInstance<>("legacy.options.controlIcons", OptionInstance.noTooltip(), (c, i)-> Component.translatable("options.generic_value",c,i.equals("auto")? Component.translatable("legacy.options.auto_value", ControlType.getActiveType().getDisplayName()) : ControlType.typesMap.get(i).getDisplayName()),  new OptionInstance.ClampingLazyMaxIntRange(0, ControlType.types::size,Integer.MAX_VALUE).xmap(i-> i == 0 ? "auto" : ControlType.types.get(i - 1).getId().toString(), s-> s.equals("auto") ? 0 : (1 + ControlType.types.indexOf(ControlType.typesMap.get(s)))), "auto", d -> {});
-        createWorldDifficulty = new OptionInstance<>("options.difficulty", d->Tooltip.create(d.getInfo()), (c, d) -> d.getDisplayName(), new OptionInstance.Enum<>(Arrays.asList(Difficulty.values()), Codec.INT.xmap(Difficulty::byId, Difficulty::getId)), Difficulty.NORMAL, d -> {});
+        createWorldDifficulty = new OptionInstance<>("options.difficulty", OptionInstance.noTooltip(), (c, d) -> d.getDisplayName(), new OptionInstance.Enum<>(Arrays.asList(Difficulty.values()), Codec.INT.xmap(Difficulty::byId, Difficulty::getId)), Difficulty.NORMAL, d -> {});
         smoothMovement = OptionInstance.createBoolean("legacy.options.smoothMovement",true);
         legacyCreativeBlockPlacing = OptionInstance.createBoolean("legacy.options.legacyCreativeBlockPlacing",true);
         smoothAnimatedCharacter = OptionInstance.createBoolean("legacy.options.smoothAnimatedCharacter",false);
         autoResolution = OptionInstance.createBoolean("legacy.options.autoResolution", true, b -> minecraft.resizeDisplay());
+        developerMode = OptionInstance.createBoolean("legacy.options.developerMode", false);
         if(Legacy4JClient.canLoadVanillaOptions)
             load();
     }
@@ -248,6 +255,7 @@ public abstract class OptionsMixin implements LegacyOptions {
         fieldAccess.process("smoothAnimatedCharacter", smoothAnimatedCharacter);
         fieldAccess.process("smoothMovement", smoothMovement);
         fieldAccess.process("legacyCreativeBlockPlacing", legacyCreativeBlockPlacing);
+        fieldAccess.process("developerMode", developerMode);
         for (KeyMapping keyMapping : keyMappings) {
             LegacyKeyMapping mapping = (LegacyKeyMapping) keyMapping;
             ControllerBinding binding = fieldAccess.process("component_" + keyMapping.getName(), mapping.getBinding(), s-> {
@@ -383,5 +391,8 @@ public abstract class OptionsMixin implements LegacyOptions {
     }
     public OptionInstance<Double> rightTriggerDeadZone() {
         return rightTriggerDeadZone;
+    }
+    public OptionInstance<Boolean> developerMode() {
+        return developerMode;
     }
 }

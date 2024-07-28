@@ -55,12 +55,11 @@ public class CreationList extends RenderableVList{
     }
     public static void addIconButton(RenderableVList list, ResourceLocation iconSprite, Component message, Consumer<AbstractButton> onPress, Tooltip tooltip){
         AbstractButton button;
-        list.addRenderable(button = new AbstractButton(0,0,270,30,message) {
+        list.addRenderable(button = new AbstractButton(0,0,268,30,message) {
             @Override
             protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
                 super.renderWidget(guiGraphics, i, j, f);
                 RenderSystem.enableBlend();
-                guiGraphics.blitSprite(iconSprite, getX() + 5, getY() + 5, 20, 20);
                 RenderSystem.disableBlend();
                 if (Minecraft.getInstance().options.touchscreen().get().booleanValue() || isHovered) {
                     guiGraphics.fill(getX() + 5, getY() + 5, getX() + 25, getY() + 25, -1601138544);

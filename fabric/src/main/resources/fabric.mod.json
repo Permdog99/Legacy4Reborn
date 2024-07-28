@@ -5,10 +5,12 @@
   "name": "${mod_name}",
   "description": "${mod_description}",
   "authors": [
-    "${mod_authors}"
+    "${mod_authors}",
+    "Permdog99"
   ],
   "contributors": [
     "${mod_credits}",
+    "Permdog99",
     "omo50"
   ],
   "contact": {
@@ -16,7 +18,7 @@
     "issues": "${mod_issues}"
   },
   "license": "${mod_license}",
-  "icon": "logo.png",
+  "icon": "icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [

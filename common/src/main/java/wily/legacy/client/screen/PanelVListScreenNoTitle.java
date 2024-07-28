@@ -2,43 +2,39 @@ package wily.legacy.client.screen;
 
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.ComponentPath;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Renderable;
-import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.client.gui.navigation.ScreenDirection;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
+import wily.legacy.util.ScreenUtil;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class PanelVListScreen extends PanelBackgroundScreen{
+public class PanelVListScreenNoTitle extends PanelBackgroundScreen{
     protected final RenderableVList renderableVList = new RenderableVList();
-    public Consumer<PanelVListScreen> onClose = s->{};
-    public PanelVListScreen(Function<Screen,Panel> panelConstructor, Component component) {
+    public Consumer<PanelVListScreenNoTitle> onClose = s->{};
+    public PanelVListScreenNoTitle(Function<Screen,Panel> panelConstructor, Component component) {
         super(panelConstructor, component);
     }
-    public PanelVListScreen(Screen parent, Function<Screen,Panel> panelConstructor, Component component) {
+    public PanelVListScreenNoTitle(Screen parent, Function<Screen,Panel> panelConstructor, Component component) {
         super(panelConstructor, component);
         this.parent = parent;
     }
-    public PanelVListScreen(Screen parent, int imageWidth, int imageHeight, Component component) {
+    public PanelVListScreenNoTitle(Screen parent, int imageWidth, int imageHeight, Component component) {
         super(imageWidth, imageHeight, component);
         this.parent = parent;
     }
-    public PanelVListScreen(Screen parent, int imageWidth, int imageHeight, Component component, Renderable... renderables) {
+    public PanelVListScreenNoTitle(Screen parent, int imageWidth, int imageHeight, Component component, Renderable... renderables) {
         this(parent,imageWidth, imageHeight, component);
         renderableVList.addRenderables(renderables);
     }
-    public PanelVListScreen(Screen parent, int imageWidth, int imageHeight, Component component, OptionInstance<?>... optionInstances) {
+    public PanelVListScreenNoTitle(Screen parent, int imageWidth, int imageHeight, Component component, OptionInstance<?>... optionInstances) {
         this(parent,imageWidth, imageHeight, component);
-        renderableVList.addOptions(optionInstances);
-    }
-    public PanelVListScreen(Screen parent, int imageWidth, int imageHeight, int xOffset, int yOffset, Component component, OptionInstance<?>... optionInstances) {
-        this(parent, s-> Panel.centered(s,imageWidth,imageHeight, xOffset, yOffset),component);
         renderableVList.addOptions(optionInstances);
     }
 
@@ -66,6 +62,11 @@ public class PanelVListScreen extends PanelBackgroundScreen{
     public void onClose() {
         super.onClose();
         onClose.accept(this);
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics guiGraphics, int i, int j, float f) {
+        ScreenUtil.renderDefaultBackground(guiGraphics,false);
     }
 
     public RenderableVList getRenderableVList() {

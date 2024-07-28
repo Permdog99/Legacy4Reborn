@@ -60,49 +60,13 @@ public class WorldMoreOptionsScreen extends PanelVListScreen implements ControlT
         editBox.setResponder(string -> parent.getUiState().setSeed(editBox.getValue()));
         renderableVList.addRenderable(editBox);
         renderableVList.addRenderable(SimpleLayoutRenderable.create(0,9,r-> ((guiGraphics, i, j, f) -> guiGraphics.drawString(Minecraft.getInstance().font, Component.translatable("selectWorld.seedInfo"),r.x + 1,r.y + 2,CommonColor.INVENTORY_GRAY_TEXT.get(),false))));
-        renderableVList.addRenderable(new TickBox(0,0,parent.getUiState().isGenerateStructures(),b-> Component.translatable("selectWorld.mapFeatures"),b-> Tooltip.create(Component.translatable("selectWorld.mapFeatures.info")),b->parent.getUiState().setGenerateStructures(b.selected)));
-        renderableVList.addRenderable(new TickBox(0,0,parent.getUiState().isBonusChest(),b-> Component.translatable("selectWorld.bonusItems"),b-> null,b->parent.getUiState().setBonusChest(b.selected)));
         renderableVList.addRenderable(new LegacySliderButton<>(0, 0, 0, 16, s -> s.getDefaultMessage(Component.translatable("selectWorld.mapType"), parent.getUiState().getWorldType().describePreset()), b -> parent.getUiState().getWorldType().isAmplified() ? Tooltip.create(Component.translatable("generator.minecraft.amplified.info")) : null, parent.getUiState().getWorldType(), () -> hasAltDown() ? parent.getUiState().getAltPresetList() : parent.getUiState().getNormalPresetList(), b -> parent.getUiState().setWorldType(b.objectValue)));
-        Button customizeButton = Button.builder(Component.translatable("selectWorld.customizeType"), button -> {
-            PresetEditor presetEditor = parent.getUiState().getPresetEditor();
-            if (presetEditor != null)
-                minecraft.setScreen(presetEditor.createEditScreen(parent, parent.getUiState().getSettings()));
-        }).build();
-        parent.getUiState().addListener( s->customizeButton.active = !s.isDebug() && s.getPresetEditor() != null);
-        renderableVList.addRenderable(customizeButton);
         SimpleLayoutRenderable.create(0,9,r-> ((guiGraphics, i, j, f) -> {}));
-        TickBox hostPrivilleges = new TickBox(0,0,parent.getUiState().isAllowCheats(),b->Component.translatable("selectWorld.allowCommands"),b->Tooltip.create(Component.translatable("selectWorld.allowCommands.info")),b->parent.getUiState().setAllowCheats(b.selected));
+        TickBox hostPrivilleges = new TickBox(0,0,parent.getUiState().isAllowCheats(),b->Component.translatable("selectWorld.allowCommands"),b->null,b->parent.getUiState().setAllowCheats(b.selected));
         parent.getUiState().addListener(s-> hostPrivilleges.active = !s.isDebug() && !s.isHardcore());
-        GameRules gameRules = parent.getUiState().getGameRules();
         Pair<Path,PackRepository> pair = parent.getDataPackSelectionSettings(parent.getUiState().getSettings().dataConfiguration());
-        if (pair != null){
-            renderableVList.addRenderable(SimpleLayoutRenderable.create(0,9,r-> ((guiGraphics, i, j, f) -> guiGraphics.drawString(Minecraft.getInstance().font, Component.translatable("selectWorld.experiments"),r.x + 1,r.y + 2,CommonColor.INVENTORY_GRAY_TEXT.get(),false))));
-            PackRepository dataRepository = pair.getSecond();
-            List<String> selectedExperiments = new ArrayList<>(dataRepository.getSelectedIds());
-            dataRepository.getAvailablePacks().forEach(p->{
-                if (p.getPackSource()!= PackSource.FEATURE) return;
-                String id = "dataPack." + p.getId() + ".name";
-                Component name = Language.getInstance().has(id) ? Component.translatable(id) : p.getTitle();
-                renderableVList.addRenderable(new TickBox(0,0,selectedExperiments.contains(p.getId()),b-> name,b->new MultilineTooltip(tooltipBox.getWidth() - 10,p.getDescription()),b->{
-                    if (b.selected && !selectedExperiments.contains(p.getId())) selectedExperiments.add(p.getId());
-                    else if (!b.selected) selectedExperiments.remove(p.getId());
-                }));
-            });
-            onClose = ()->{
-                if (!dataRepository.getSelectedIds().equals(selectedExperiments)) {
-                    dataRepository.setSelected(selectedExperiments);
-                    parent.tryApplyNewDataPacks(dataRepository, false, w -> minecraft.setScreen(this));
-                }
-            };
-        }
-        renderableVList.addRenderable(Button.builder(Component.translatable("selectWorld.dataPacks"), button -> openDataPackSelectionScreen(parent, parent.getUiState().getSettings().dataConfiguration())).build());
         renderableVList.addRenderable(new TickBox(0,0,parent.getUiState().isAllowCheats(), b-> Component.translatable("legacy.menu.selectWorld.trust_players"),b-> null,t-> setTrustPlayers.accept(t.selected)));
-        addGameRulesOptions(renderableVList,gameRules, k-> k.getCategory() == GameRules.Category.UPDATES);
         gameRenderables.addRenderable(hostPrivilleges);
-        for (GameRules.Category value : GameRules.Category.values()) {
-            if (value == GameRules.Category.UPDATES) continue;
-            addGameRulesOptions(gameRenderables,gameRules, k-> k.getCategory() == value);
-        }
         parent.getUiState().onChanged();
     }
     public void addGameRulesOptions(RenderableVList list, GameRules gameRules, Predicate<GameRules.Key<?>> allowGamerule){

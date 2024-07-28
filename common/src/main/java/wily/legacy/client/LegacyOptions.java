@@ -50,4 +50,5 @@ public interface LegacyOptions {
     OptionInstance<Double> rightStickDeadZone();
     OptionInstance<Double> leftTriggerDeadZone();
     OptionInstance<Double> rightTriggerDeadZone();
+    OptionInstance<Boolean> developerMode();
 }

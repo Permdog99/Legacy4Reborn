@@ -16,9 +16,12 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.*;
+import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -32,7 +35,10 @@ import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import wily.legacy.Legacy4J;
+import wily.legacy.Legacy4JClient;
 import wily.legacy.client.LegacyOptions;
+import wily.legacy.client.LegacyWorldTemplate;
+import wily.legacy.client.screen.compat.FriendsServerRenderableList;
 import wily.legacy.util.ScreenUtil;
 
 import java.io.IOException;
@@ -48,6 +54,7 @@ import java.util.Locale;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.Consumer;
 
 public class SaveRenderableList extends RenderableVList {
     static final ResourceLocation ERROR_HIGHLIGHTED = new ResourceLocation("world_list/error_highlighted");
@@ -73,6 +80,7 @@ public class SaveRenderableList extends RenderableVList {
     @Nullable
     public List<LevelSummary> currentlyDisplayedLevels;
     private String filter;
+    protected final ServerRenderableList serverRenderableList = PublishScreen.hasWorldHost() ? new FriendsServerRenderableList() : new ServerRenderableList();
     public static LoadingCache<LevelSummary, Long> sizeCache = CacheBuilder.newBuilder().build(new CacheLoader<>() {
         @Override
         public Long load(LevelSummary key) {
@@ -123,6 +131,7 @@ public class SaveRenderableList extends RenderableVList {
         layoutSpacing(l->0);
         this.minecraft = Minecraft.getInstance();
         this.filter = "";
+
         reloadSaveList();
     }
 
@@ -173,16 +182,68 @@ public class SaveRenderableList extends RenderableVList {
             this.minecraft.delayCrash(CrashReport.forThrowable(throwable, "Couldn't load level list"));
             return List.of();
         });
+
+    }
+
+    public static void addIconButton(RenderableVList list, ResourceLocation iconSprite, Component message, Consumer<AbstractButton> onPress){
+        addIconButton(list,iconSprite,message,onPress,null);
+    }
+    public static void addIconButton(RenderableVList list, ResourceLocation iconSprite, Component message, Consumer<AbstractButton> onPress, Tooltip tooltip){
+        AbstractButton button;
+        list.addRenderable(button = new AbstractButton(0,0,268,30,message) {
+            @Override
+            protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+                super.renderWidget(guiGraphics, i, j, f);
+                RenderSystem.enableBlend();
+                RenderSystem.disableBlend();
+                if (Minecraft.getInstance().options.touchscreen().get().booleanValue() || isHovered) {
+                    guiGraphics.fill(getX() + 5, getY() + 5, getX() + 25, getY() + 25, -1601138544);
+                }
+            }
+            @Override
+            protected void renderScrollingString(GuiGraphics guiGraphics, Font font, int i, int j) {
+                int k = this.getX() + 35;
+                int l = this.getX() + this.getWidth();
+                ScreenUtil.renderScrollingString(guiGraphics, font, this.getMessage(), k, this.getY(), l, this.getY() + this.getHeight(), j, true);
+            }
+            @Override
+            public void onPress() {
+                onPress.accept(this);
+            }
+
+            @Override
+            protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+                defaultButtonNarrationText(narrationElementOutput);
+            }
+        });
+        button.setTooltip(tooltip);
     }
 
     public void fillLevels(String filter, List<LevelSummary> list) {
         screen.isLoading = false;
         renderables.clear();
+        addIconButton(this,new ResourceLocation(Legacy4J.MOD_ID,"creation_list/create_world"),Component.translatable("legacy.menu.create_world"), c-> CreateWorldScreen.openFresh(this.minecraft, screen));
+        GuiEventListener createWorld = (GuiEventListener) this.renderables.get(0);
+        screen.setFocused(createWorld);
+        LegacyWorldTemplate.list.forEach(t-> addIconButton(this,t.icon(),t.buttonName(), c-> {
+            try {
+                String name = Legacy4JClient.importSaveFile(minecraft,minecraft.getResourceManager().getResourceOrThrow(t.worldTemplate()).open(),t.folderName());
+                if (t.directJoin()) minecraft.createWorldOpenFlows().checkForBackupAndLoad(name, ()-> minecraft.setScreen(screen));
+                else {
+                    LevelStorageSource.LevelStorageAccess access = minecraft.getLevelSource().createAccess(name);
+                    LevelSummary summary = access.getSummary(access.getDataTag());
+                    minecraft.setScreen(new LoadSaveScreen(screen,summary, access,true));
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }));
+
         if (list != null) {
             filter = filter.toLowerCase(Locale.ROOT);
             for (LevelSummary summary : list) {
                 if (!this.filterAccepts(filter, summary)) continue;
-                addRenderable(new AbstractButton(0, 0, 270, 30, Component.literal(summary.getLevelName())) {
+                addRenderable(new AbstractButton(0, 0, 268, 30, Component.literal(summary.getLevelName())) {
                     @Override
                     public void onPress() {
                         joinWorld(summary);
@@ -284,6 +345,7 @@ public class SaveRenderableList extends RenderableVList {
         }
         this.currentlyDisplayedLevels = list;
         screen.triggerImmediateNarration(true);
+
     }
 
     private boolean filterAccepts(String string, LevelSummary levelSummary) {

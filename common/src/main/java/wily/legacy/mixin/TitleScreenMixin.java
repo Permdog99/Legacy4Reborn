@@ -24,6 +24,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import wily.legacy.Legacy4JClient;
+import wily.legacy.client.LegacyTip;
 import wily.legacy.client.controller.ControllerManager;
 import wily.legacy.client.screen.*;
 import wily.legacy.util.ScreenUtil;
@@ -50,7 +51,7 @@ public abstract class TitleScreenMixin extends Screen implements ControlTooltip.
         minecraft = Minecraft.getInstance();
         if (minecraft.isDemo()) createDemoMenuOptions();
         else this.createNormalMenuOptions();
-        renderableVList.addRenderable(Button.builder(Component.translatable("legacy.menu.mods"), b -> minecraft.setScreen(new ModsScreen(this))).build());
+        renderableVList.addRenderable(Button.builder(Component.nullToEmpty("Join SMP Server"), b -> minecraft.getToasts().addToast(new LegacyTip(Component.literal("Work in Progress!!"), 80, 40).disappearTime(960))).build());
         renderableVList.addRenderable(Button.builder(Component.translatable("options.language"), b -> minecraft.setScreen(new LegacyLanguageScreen(this, this.minecraft.getLanguageManager()))).build());
         renderableVList.addRenderable(Button.builder(Component.translatable("menu.options"), b -> minecraft.setScreen(new HelpOptionsScreen(this))).build());
         renderableVList.addRenderable(Button.builder(Component.translatable("menu.quit"), (button) -> minecraft.setScreen(new ExitConfirmationScreen(this))).build());

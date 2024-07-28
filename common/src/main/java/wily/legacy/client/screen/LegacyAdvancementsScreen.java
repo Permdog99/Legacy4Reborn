@@ -46,11 +46,11 @@ public class LegacyAdvancementsScreen extends PanelBackgroundScreen{
     public static final List<ResourceLocation> vanillaOrder = List.of(new ResourceLocation("story/root"),new ResourceLocation("adventure/root"),new ResourceLocation("husbandry/root"),new ResourceLocation("nether/root"),new ResourceLocation("end/root"));
 
     public LegacyAdvancementsScreen(Screen parent, ClientAdvancements advancements) {
-        super(449,252,TITLE);
+        super(449,252, 0, -24, TITLE);
         this.parent = parent;
         this.advancements = advancements;
         StreamSupport.stream(getAdvancements().roots().spliterator(),false).sorted(Comparator.comparingInt(n->vanillaOrder.contains(n.holder().id()) ? vanillaOrder.indexOf(n.holder().id()): Integer.MAX_VALUE)).forEach(n-> n.advancement().display().ifPresent( d-> {
-            tabList.addTabButton(43,0, LegacyTabButton.iconOf(d.getIcon()),d.getTitle(),b-> {
+            tabList.addTabButton(0,0, null, Component.nullToEmpty(""), b-> {
                 this.selectedRoot = n;
                 selectedAdvancement = null;
                 repositionElements();
@@ -130,7 +130,7 @@ public class LegacyAdvancementsScreen extends PanelBackgroundScreen{
         super.init();
         panel.y +=18;
         addRenderableOnly(((guiGraphics, i, j, f) ->{
-            guiGraphics.drawString(font,showDescription ? tabList.tabButtons.get(tabList.selectedTab).getMessage() : getTitle(),panel.x + (panel.width - font.width(showDescription ? tabList.tabButtons.get(tabList.selectedTab).getMessage() : getTitle()))/ 2,panel.y + 10, CommonColor.INVENTORY_GRAY_TEXT.get(),false);
+            guiGraphics.drawString(font, getTitle(),panel.x + (panel.width - font.width(getTitle()))/ 2,panel.y + 10, CommonColor.INVENTORY_GRAY_TEXT.get(),false);
             if (selectedRoot != null) selectedRoot.advancement().display().flatMap(DisplayInfo::getBackground).ifPresent(b -> guiGraphics.blit(b,panel.x + 14, panel.y + 24,0,0,422,23,16,16));
             ScreenUtil.renderPanelTranslucentRecess(guiGraphics,panel.x + 12, panel.y + 22, 426, 27);
             if (selectedAdvancement != null) selectedAdvancement.advancement().display().ifPresent(info-> guiGraphics.drawString(font,info.getTitle(),panel.x + (panel.width - font.width(info.getTitle()))/ 2,panel.y + 32,0xFFFFFF));

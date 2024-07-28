@@ -146,6 +146,14 @@ public class ScreenUtil {
         graphics.pose().translate(0,getHUDDistance(),0);
         RenderSystem.enableBlend();
     }
+
+    public static void prepareHUDRenderForHealth(GuiGraphics graphics){
+        graphics.pose().pushPose();
+        graphics.setColor(1.0f,1.0f,1.0f,getHUDOpacity());
+        graphics.pose().translate(0, getLegacyOptions().hudScale().get() == 1 ? getHUDDistance() : (getLegacyOptions().hudScale().get() == 2 ? getHUDDistance() + 4 : getHUDDistance() + 8),0);
+        RenderSystem.enableBlend();
+    }
+
     public static void finishHUDRender(GuiGraphics graphics){
         graphics.pose().popPose();
         graphics.setColor(1.0f,1.0f,1.0f,1.0f);

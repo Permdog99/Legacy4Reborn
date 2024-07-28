@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import wily.legacy.Legacy4J;
+import wily.legacy.Legacy4JClient;
 import wily.legacy.util.Offset;
 import wily.legacy.inventory.LegacySlotDisplay;
 import wily.legacy.util.ScreenUtil;
@@ -19,6 +20,7 @@ import static wily.legacy.util.LegacySprites.SHIELD_SLOT;
 @Mixin(InventoryMenu.class)
 public class InventoryMenuMixin {
     @Shadow @Final private static EquipmentSlot[] SLOT_IDS;
+
     private static final Offset EQUIP_SLOT_OFFSET = new Offset(50,0,0);
 
     @ModifyArg(method = "<init>",at = @At(value = "INVOKE",target = "Lnet/minecraft/world/inventory/InventoryMenu;addSlot(Lnet/minecraft/world/inventory/Slot;)Lnet/minecraft/world/inventory/Slot;", ordinal = 0))
@@ -27,6 +29,11 @@ public class InventoryMenuMixin {
             public boolean isVisible() {
                 return ScreenUtil.hasClassicCrafting();
             }
+
+            @Override
+            public IconHolderOverride getIconHolderOverride() {
+                return Legacy4JClient.ICON_HOLDER_360;
+            }
         });
     }
     @ModifyArg(method = "<init>",at = @At(value = "INVOKE",target = "Lnet/minecraft/world/inventory/InventoryMenu;addSlot(Lnet/minecraft/world/inventory/Slot;)Lnet/minecraft/world/inventory/Slot;", ordinal = 1))
@@ -34,6 +41,11 @@ public class InventoryMenuMixin {
         return LegacySlotDisplay.override(originalSlot,111 + originalSlot.getContainerSlot() % 2 * 21, 30 + originalSlot.getContainerSlot() / 2 * 21,new LegacySlotDisplay(){
             public boolean isVisible() {
                 return ScreenUtil.hasClassicCrafting();
+            }
+
+            @Override
+            public IconHolderOverride getIconHolderOverride() {
+                return Legacy4JClient.ICON_HOLDER_360;
             }
         });
     }
@@ -47,15 +59,30 @@ public class InventoryMenuMixin {
             public Offset getOffset() {
                 return ScreenUtil.hasClassicCrafting() ? Offset.ZERO : EQUIP_SLOT_OFFSET;
             }
+
+            @Override
+            public IconHolderOverride getIconHolderOverride() {
+                return Legacy4JClient.ICON_HOLDER_360;
+            }
         });
     }
     @ModifyArg(method = "<init>",at = @At(value = "INVOKE",target = "Lnet/minecraft/world/inventory/InventoryMenu;addSlot(Lnet/minecraft/world/inventory/Slot;)Lnet/minecraft/world/inventory/Slot;", ordinal = 3))
     private Slot addInventorySlots(Slot originalSlot){
-        return LegacySlotDisplay.override(originalSlot, 14 + (originalSlot.getContainerSlot() - 9) % 9 * 21,116 + (originalSlot.getContainerSlot() - 9) / 9 * 21);
+        return LegacySlotDisplay.override(originalSlot, 14 + (originalSlot.getContainerSlot() - 9) % 9 * 21, 116 + (originalSlot.getContainerSlot() - 9) / 9 * 21, new LegacySlotDisplay() {
+            @Override
+            public IconHolderOverride getIconHolderOverride() {
+                return Legacy4JClient.ICON_HOLDER_360;
+            }
+        });
     }
     @ModifyArg(method = "<init>",at = @At(value = "INVOKE",target = "Lnet/minecraft/world/inventory/InventoryMenu;addSlot(Lnet/minecraft/world/inventory/Slot;)Lnet/minecraft/world/inventory/Slot;", ordinal = 4))
     private Slot addHotbarSlots(Slot originalSlot){
-        return LegacySlotDisplay.override(originalSlot, 14 + originalSlot.getContainerSlot() * 21,186);
+        return LegacySlotDisplay.override(originalSlot, 14 + originalSlot.getContainerSlot() * 21, 186, new LegacySlotDisplay() {
+            @Override
+            public IconHolderOverride getIconHolderOverride() {
+                return Legacy4JClient.ICON_HOLDER_360;
+            }
+        });
     }
     @ModifyArg(method = "<init>",at = @At(value = "INVOKE",target = "Lnet/minecraft/world/inventory/InventoryMenu;addSlot(Lnet/minecraft/world/inventory/Slot;)Lnet/minecraft/world/inventory/Slot;", ordinal = 5))
     private Slot addSlotSixth(Slot originalSlot){
@@ -65,6 +92,15 @@ public class InventoryMenuMixin {
             }
             public ResourceLocation getIconSprite() {
                 return originalSlot.getItem().isEmpty() ? SHIELD_SLOT : null;
+            }
+            @Override
+            public boolean isVisible() {
+                return false;
+            }
+
+            @Override
+            public IconHolderOverride getIconHolderOverride() {
+                return Legacy4JClient.ICON_HOLDER_360;
             }
         });
     }

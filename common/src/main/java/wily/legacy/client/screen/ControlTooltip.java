@@ -358,7 +358,7 @@ public interface ControlTooltip {
     class GuiManager implements PreparableReloadListener {
         public static final List<ControlTooltip> controlTooltips = new ArrayList<>();
         public static void applyGUIControlTooltips(Renderer renderer, Minecraft minecraft){
-            renderer.add((LegacyKeyMapping) minecraft.options.keyJump,()-> minecraft.player.isUnderWater() ? getAction("legacy.action.swim_up") : null).add((LegacyKeyMapping) Minecraft.getInstance().options.keyInventory).add((LegacyKeyMapping) Legacy4JClient.keyCrafting).add((LegacyKeyMapping) Minecraft.getInstance().options.keyUse,()-> getActualUse(minecraft)).add((LegacyKeyMapping) Minecraft.getInstance().options.keyAttack,()->getMainAction(minecraft));
+            renderer.add((LegacyKeyMapping) minecraft.options.keyJump,()-> minecraft.player.isUnderWater() ? getAction("legacy.action.swim_up") : null).add((LegacyKeyMapping) Legacy4JClient.keyCrafting).add((LegacyKeyMapping) Minecraft.getInstance().options.keyInventory).add((LegacyKeyMapping) Minecraft.getInstance().options.keyUse,()-> getActualUse(minecraft)).add((LegacyKeyMapping) Minecraft.getInstance().options.keyAttack,()->getMainAction(minecraft));
             renderer.tooltips.addAll(controlTooltips);
             renderer.add((LegacyKeyMapping) minecraft.options.keyShift,()->  minecraft.player.isPassenger() ? getAction(minecraft.player.getVehicle() instanceof LivingEntity ? "legacy.action.dismount" : "legacy.action.exit") : null).add((LegacyKeyMapping) minecraft.options.keyPickItem,()-> getPickAction(minecraft));
         }
@@ -423,12 +423,9 @@ public interface ControlTooltip {
             if (minecraft.hitResult instanceof BlockHitResult r && minecraft.level.getBlockState(r.getBlockPos()).getBlock() instanceof BedBlock) return getAction("legacy.action.sleep");
             if (minecraft.hitResult instanceof BlockHitResult r && minecraft.hitResult.getType() != HitResult.Type.MISS && minecraft.level.getBlockState(r.getBlockPos()).getBlock() instanceof NoteBlock) return getAction("legacy.action.change_pitch");
             if (canPlace(minecraft, hand)) return getAction(actualItem.getItem() instanceof BlockItem b && isPlant(b.getBlock()) ? "legacy.action.plant" : "legacy.action.place");
-            if (canFeed(minecraft, hand)) return getAction("legacy.action.feed");
             if (actualItem.is(Items.IRON_INGOT) && minecraft.hitResult instanceof EntityHitResult r && r.getEntity() instanceof IronGolem g  && g.getHealth() < g.getMaxHealth()) return getAction("legacy.action.repair");
             if (minecraft.hitResult instanceof EntityHitResult r && r.getEntity() instanceof TamableAnimal a && a.isTame() && a.isFood(actualItem) && a.getHealth() < a.getMaxHealth()) return getAction("legacy.action.heal");
             if (minecraft.hitResult instanceof EntityHitResult r && r.getEntity() instanceof TamableAnimal a && a.isTame() && a.isOwnedBy(minecraft.player)) return getAction(a.isInSittingPose() ? "legacy.action.follow_me" : "legacy.action.sit" );
-            if (canTame(minecraft, hand)) return getAction("legacy.action.tame");
-            if (canSetLoveMode(minecraft,hand)) return getAction("legacy.action.love_mode");
             if (minecraft.hitResult instanceof BlockHitResult r && actualItem.getItem() instanceof BoneMealItem && (blockState = minecraft.level.getBlockState(r.getBlockPos())).getBlock() instanceof BonemealableBlock b && b.isValidBonemealTarget(minecraft.level,r.getBlockPos(),blockState)) return getAction("legacy.action.grow");
             if (minecraft.hitResult instanceof BlockHitResult r && (blockState = minecraft.level.getBlockState(r.getBlockPos())).getBlock() instanceof ComposterBlock){
                 if (blockState.getValue(ComposterBlock.LEVEL) == 8) return getAction("legacy.action.collect");
@@ -470,8 +467,6 @@ public interface ControlTooltip {
             if (minecraft.player.getItemInHand(hand).getItem() instanceof SaddleItem && minecraft.hitResult instanceof EntityHitResult r && r.getEntity() instanceof Saddleable s && s.isSaddleable() && !s.isSaddled()) return getAction("legacy.action.saddle");
             if ((actualItem.isEdible() && minecraft.player.canEat(false)) || actualItem.getItem() instanceof PotionItem) return getAction(actualItem.getUseAnimation() == UseAnim.DRINK ? "legacy.action.drink" : "legacy.action.eat");
             if (canTill(minecraft, hand)) return getAction("legacy.action.till");
-            if (minecraft.player.getItemInHand(hand).getItem() instanceof AxeItem && minecraft.hitResult instanceof BlockHitResult r && AxeItem.STRIPPABLES.get(minecraft.level.getBlockState(r.getBlockPos()).getBlock()) != null) return getAction("legacy.action.strip");
-            if (minecraft.player.getItemInHand(hand).getItem() instanceof ShovelItem && minecraft.hitResult instanceof BlockHitResult r && ShovelItem.FLATTENABLES.get(minecraft.level.getBlockState(r.getBlockPos()).getBlock()) != null) return getAction("legacy.action.dig_path");
         }
         if (minecraft.hitResult instanceof EntityHitResult r && r.getEntity() instanceof AbstractHorse h && h.isTamed() && minecraft.player.isSecondaryUseActive()) return getAction("legacy.action.open");
         if (minecraft.hitResult instanceof EntityHitResult r && r.getEntity().canAddPassenger(minecraft.player) && minecraft.player.canRide(r.getEntity())){

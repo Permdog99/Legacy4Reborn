@@ -114,7 +114,7 @@ public class ControllerMappingScreen extends PanelVListScreen implements Control
         panel.height = Math.min(height,293);
         panel.init();
         addRenderableOnly(panel);
-        addRenderableOnly(((guiGraphics, i, j, f) -> guiGraphics.drawString(font, Legacy4JPlatform.getModInfo("minecraft").getVersion() + " " + Legacy4J.VERSION.get(),panel.getX() + panel.getWidth() + 81, panel.getY() + panel.getHeight() - 7,CommonColor.INVENTORY_GRAY_TEXT.get(),false)));
+        addRenderableOnly(((guiGraphics, i, j, f) -> guiGraphics.drawString(font, Component.translatable("legacy.reborn.version"),panel.getX() + panel.getWidth() + 81, panel.getY() + panel.getHeight() - 7,CommonColor.INVENTORY_GRAY_TEXT.get(),false)));
         getRenderableVList().init(this,panel.x + 7,panel.y + 6,panel.width - 14,panel.height);
     }
     @Override

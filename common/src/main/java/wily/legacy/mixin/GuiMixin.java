@@ -262,7 +262,7 @@ public abstract class GuiMixin implements ControlTooltip.Event {
             ci.cancel();
             return;
         }
-        ScreenUtil.prepareHUDRender(guiGraphics);
+        ScreenUtil.prepareHUDRenderForHealth(guiGraphics);
         guiGraphics.pose().translate(guiGraphics.guiWidth() / 2f, guiGraphics.guiHeight(),0);
         ScreenUtil.applyHUDScale(guiGraphics);
         guiGraphics.pose().translate(-guiGraphics.guiWidth() / 2, -guiGraphics.guiHeight(),0);

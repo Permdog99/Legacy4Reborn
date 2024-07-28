@@ -38,8 +38,11 @@ public abstract class LegacyCraftingMenu extends AbstractContainerMenu implement
     public static final Component LOOM_TITLE = Component.translatable("container.stonecutter");
     public static final Map<ResourceKey<BannerPattern>,Ingredient> LOOM_PATTERN_EXTRA_INGREDIENT_CACHE = new ConcurrentHashMap<>();
     final BlockPos blockPos;
+    public boolean is2x2 = false;
     public boolean inventoryActive = true;
     public boolean showedNotEnoughIngredientsHint = false;
+    private static final Offset INVENTORY_OFFSET = new Offset(0.5,0.5,0);
+    private static final Offset INVENTORY_2x2_OFFSET = new Offset(-40.5,0.5,0);
 
     public static LegacyCraftingMenu craftingMenu(Inventory inventory, @Nullable MenuType<?> menuType, int i, BlockPos pos, int gridDimension){
         return new LegacyCraftingMenu(inventory,menuType,i,pos) {
@@ -183,7 +186,7 @@ public abstract class LegacyCraftingMenu extends AbstractContainerMenu implement
                     }
                 }, new LegacySlotDisplay(){
                     public Offset getOffset() {
-                        return new Offset(0.5,0.5,0);
+                        return is2x2 ? INVENTORY_2x2_OFFSET : INVENTORY_OFFSET;
                     }
                     public int getWidth() {
                         return 16;

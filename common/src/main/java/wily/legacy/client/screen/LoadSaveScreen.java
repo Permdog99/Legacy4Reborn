@@ -45,7 +45,7 @@ public class LoadSaveScreen extends PanelBackgroundScreen {
     protected final LegacySliderButton<GameType> gameTypeSlider;
     public boolean trustPlayers;
     public boolean allowCommands;
-    public static final List<ResourceKey<Level>> RESETTABLE_DIMENSIONS = new ArrayList<>(List.of(Level.NETHER,Level.END));
+    public static final List<ResourceKey<Level>> RESETTABLE_DIMENSIONS = new ArrayList<>(List.of(Level.NETHER));
     public final List<ResourceKey<Level>> dimensionsToReset = new ArrayList<>();
     public Difficulty difficulty;
     protected boolean changedGameType = false;
@@ -57,7 +57,7 @@ public class LoadSaveScreen extends PanelBackgroundScreen {
     public static final List<GameType> GAME_TYPES = Arrays.stream(GameType.values()).toList();
 
     public LoadSaveScreen(Screen screen, LevelSummary summary, LevelStorageSource.LevelStorageAccess access, boolean deleteOnClose) {
-        super(s-> new Panel(p-> (s.width - (p.width + (ScreenUtil.hasTooltipBoxes() ? 160 : 0))) / 2, p-> (s.height - p.height) / 2 + 24,245,233), Component.translatable("legacy.menu.load_save.load"));
+        super(s-> new Panel(p-> (screen.width - 225) / 2, p-> (s.height - p.height) / 2 + 30,225,177), Component.translatable("legacy.menu.load_save.load"));
         this.deleteOnClose = deleteOnClose;
         this.parent = screen;
         this.summary = summary;
@@ -102,24 +102,24 @@ public class LoadSaveScreen extends PanelBackgroundScreen {
     @Override
     protected void init() {
         panel.init();
-        gameTypeSlider.setPosition(panel.x + 13, panel.y + 65);
-        addRenderableWidget(new LegacySliderButton<>(panel.x + 13, panel.y + 90, 220,16, b -> b.getDefaultMessage(Component.translatable("options.difficulty"),b.getObjectValue().getDisplayName()),b->Tooltip.create(difficulty.getInfo()), difficulty,()-> Arrays.asList(Difficulty.values()), b-> difficulty = b.getObjectValue())).active = !((LegacyWorldSettings)(Object)summary.getSettings()).isDifficultyLocked() && !summary.isHardcore();
-        addRenderableWidget(Button.builder(Component.translatable( "createWorld.tab.more.title"), button -> minecraft.setScreen(new WorldMoreOptionsScreen(this))).bounds(panel.x + 13, panel.y + 178,220,20).build());
+        onlineTickBox.selected = publishScreen.publish;
+        onlineTickBox.setPosition(panel.x+ 13, panel.y+65);
+        addRenderableWidget(new TickBox(panel.x+ 13,panel.y+83,allowCommands, b->Component.translatable("selectWorld.allowCommands"), b->null, b-> allowCommands = b.selected));
+        addRenderableWidget(onlineTickBox);
+        RESETTABLE_DIMENSIONS.forEach(d-> addRenderableWidget(new TickBox(panel.x+ 13,panel.y+101,false, b-> Component.translatable("legacy.menu.load_save.reset",ScreenUtil.getDimensionName(d)), b-> null, t-> {
+            if (t.selected) dimensionsToReset.add(d);
+            else dimensionsToReset.remove(d);
+        })));
+        addRenderableWidget(new LegacySliderButton<>(panel.x + 13, panel.y + 119, 200,16, b -> b.getDefaultMessage(Component.translatable("options.difficulty"),b.getObjectValue().getDisplayName()),b->null, difficulty,()-> Arrays.asList(Difficulty.values()), b-> difficulty = b.getObjectValue())).active = !((LegacyWorldSettings)(Object)summary.getSettings()).isDifficultyLocked() && !summary.isHardcore();
         Button loadButton = addRenderableWidget(Button.builder(Component.translatable("legacy.menu.load_save.load"), button -> {
             try {
                 this.onLoad();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        }).bounds(panel.x + 13, panel.y + 203,220,20).build());
-        addRenderableWidget(gameTypeSlider);
-        onlineTickBox.selected = publishScreen.publish;
-        onlineTickBox.setPosition(panel.x+ 14, panel.y+161);
-        addRenderableWidget(onlineTickBox);
+        }).bounds(panel.x + 13, panel.y + 144,200,20).build());
+
         setInitialFocus(loadButton);
-        resourcePackSelector.setX(panel.x + 13);
-        resourcePackSelector.setY(panel.y + 112);
-        addRenderableWidget(resourcePackSelector);
     }
 
     private void onLoad() throws IOException {
@@ -212,7 +212,6 @@ public class LoadSaveScreen extends PanelBackgroundScreen {
     @Override
     public void renderBackground(GuiGraphics guiGraphics, int i, int j, float f) {
         super.renderBackground(guiGraphics, i, j, f);
-        resourcePackSelector.renderTooltipBox(guiGraphics,panel);
         panel.render(guiGraphics,i,j,f);
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0.5f,0,0);
@@ -220,9 +219,9 @@ public class LoadSaveScreen extends PanelBackgroundScreen {
         guiGraphics.pose().popPose();
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0,0.5f,0);
-        guiGraphics.blit(SaveRenderableList.iconCache.getUnchecked(summary).textureLocation(),panel.x + 14, panel.y + 10, 0,0,29,29,29,29);
-        guiGraphics.drawString(font,summary.getLevelName(),panel.x + 48, panel.y + 12, CommonColor.INVENTORY_GRAY_TEXT.get(),false);
-        guiGraphics.drawString(font,Component.translatable("legacy.menu.load_save.created_in", (summary.hasCheats() ? GameType.CREATIVE : GameType.SURVIVAL).getShortDisplayName()),panel.x + 48, panel.y + 29, CommonColor.INVENTORY_GRAY_TEXT.get(),false);
+        guiGraphics.blit(SaveRenderableList.iconCache.getUnchecked(summary).textureLocation(),panel.x + 13, panel.y + 10, 0,0,29,29,29,29);
+        guiGraphics.drawString(font,summary.getLevelName(),panel.x + 47, panel.y + 12, CommonColor.INVENTORY_GRAY_TEXT.get(),false);
+        guiGraphics.drawString(font,Component.translatable("legacy.menu.load_save.created_in", (summary.hasCheats() ? GameType.CREATIVE : GameType.SURVIVAL).getShortDisplayName()),panel.x + 47, panel.y + 29, CommonColor.INVENTORY_GRAY_TEXT.get(),false);
         guiGraphics.pose().popPose();
         guiGraphics.drawString(font,Component.translatable("commands.seed.success",((LegacyWorldSettings)(Object)summary.getSettings()).getDisplaySeed()),panel.x + 13, panel.y + 49, CommonColor.INVENTORY_GRAY_TEXT.get(),false);
     }

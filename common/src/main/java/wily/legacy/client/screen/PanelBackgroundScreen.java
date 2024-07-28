@@ -15,6 +15,9 @@ public class PanelBackgroundScreen extends LegacyScreen {
     public PanelBackgroundScreen(int imageWidth, int imageHeight, Component component){
         this(s-> Panel.centered(s,imageWidth,imageHeight),component);
     }
+    public PanelBackgroundScreen(int imageWidth, int imageHeight, int xOffset, int yOffset, Component component){
+        this(s-> Panel.centered(s,imageWidth,imageHeight, xOffset, yOffset),component);
+    }
     @Override
     protected void init() {
         super.init();

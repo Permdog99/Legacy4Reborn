@@ -39,6 +39,7 @@ import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import wily.legacy.Legacy4J;
+import wily.legacy.client.CommonColor;
 import wily.legacy.util.LegacySprites;
 import wily.legacy.util.ScreenUtil;
 
@@ -131,12 +132,11 @@ public class ServerRenderableList extends RenderableVList {
         addIconButton(this,new ResourceLocation(Legacy4J.MOD_ID,"creation_list/add_server"),Component.translatable("legacy.menu.add_server"), c-> this.minecraft.setScreen(new ServerEditScreen(screen, new ServerData(I18n.get("selectServer.defaultName"), "", ServerData.Type.OTHER), true)));
         Component component = this.getMultiplayerDisabledReason();
         Tooltip tooltip = component != null ? Tooltip.create(component) : null;
-        addIconButton(this,new ResourceLocation(Legacy4J.MOD_ID,"creation_list/realms"), Component.translatable("menu.online"), b-> minecraft.setScreen(new RealmsMainScreen(screen)),tooltip);
         for (int i = 0; i < servers.size(); i++) {
             int index = i;
             ServerData server = servers.get(i);
             FaviconTexture icon = FaviconTexture.forServer(this.minecraft.getTextureManager(), server.ip);
-            addRenderable(new AbstractButton(0,0,270,30,Component.literal(server.name)) {
+            addRenderable(new AbstractButton(0,0,268,30,Component.literal(server.name)) {
                 private byte @Nullable [] lastIconBytes;
                 @Override
                 protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
@@ -385,9 +385,9 @@ public class ServerRenderableList extends RenderableVList {
         }else {
             addRenderable(SimpleLayoutRenderable.create(270,30,(r)-> ((guiGraphics, i, j, f) -> {
                 int p = r.y + (r.height - minecraft.font.lineHeight) / 2;
-                guiGraphics.drawString(this.minecraft.font, SCANNING_LABEL, this.minecraft.screen.width / 2 - this.minecraft.font.width(SCANNING_LABEL) / 2, p, 0xFFFFFF, false);
+                guiGraphics.drawString(this.minecraft.font, "Scanning for local game...", (this.screen.panel.width/2 + this.screen.panel.width/8) + (this.screen.panel.width/4) - this.minecraft.font.width("Scanning for local game...") / 2 - 9, p, CommonColor.INVENTORY_GRAY_TEXT.get(), false);
                 String string = LoadingDotsText.get(Util.getMillis());
-                guiGraphics.drawString(this.minecraft.font, string, this.minecraft.screen.width / 2 - this.minecraft.font.width(string) / 2, p + this.minecraft.font.lineHeight, -8355712, false);
+                guiGraphics.drawString(this.minecraft.font, string, (this.screen.panel.width/2 + this.screen.panel.width/4) + (this.screen.panel.width/8) - this.minecraft.font.width(string) / 2 - 9, p + this.minecraft.font.lineHeight, CommonColor.INVENTORY_GRAY_TEXT.get(), false);
             })));
         }
     }

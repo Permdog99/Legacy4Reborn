@@ -118,6 +118,7 @@
     "LivingEntityMixin",
     "LoomBlockMixin",
     "LoomMenuMixin",
+    "MapItemMixin",
     "MapItemSavedDataMixin",
     "MerchantContainerMixin",
     "MerchantMenuMixin",

@@ -18,15 +18,5 @@ import java.util.Optional;
 
 @Mixin(BiomeColors.class)
 public class BiomeColorsMixin {
-    @Mutable
-    @Shadow @Final public static ColorResolver WATER_COLOR_RESOLVER;
 
-    @Inject(method = "<clinit>",at = @At("RETURN"))
-    private static void replaceWaterColorResolver(CallbackInfo ci) {
-        WATER_COLOR_RESOLVER = ((biome, d, e) -> {
-            ClientPacketListener l = Minecraft.getInstance().getConnection();
-            LegacyBiomeOverride o = LegacyBiomeOverride.getOrDefault(l != null ? l.registryAccess().lookupOrThrow(Registries.BIOME).filterElements(b-> b == biome).listElementIds().findFirst() : Optional.empty());
-            return o.waterColor() == null  ? biome.getWaterColor() : o.waterColor();
-        });
-    }
 }

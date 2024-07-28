@@ -136,9 +136,8 @@ public class HostOptionsScreen extends PanelVListScreen implements Controller.Ev
             }));
             if (playerInfo.getGameMode().isSurvival()){
                 screen.renderableVList.addRenderable(new TickBox(0,0,((LegacyPlayerInfo) playerInfo).mayFlySurvival(),b1-> Component.translatable("legacy.menu.host_options.player.mayFly"),b1-> null, b1-> CommonNetwork.sendToServer(new PlayerInfoSync(b1.selected ? 5 : 6, profile))));
-                screen.renderableVList.addRenderable(new TickBox(0,0,((LegacyPlayerInfo) playerInfo).isExhaustionDisabled(),b1-> Component.translatable("legacy.menu.host_options.player.disableExhaustion"),b1-> null, b1-> CommonNetwork.sendToServer(new PlayerInfoSync(b1.selected ? 3 : 4, profile))));
             }
-            screen.renderableVList.addRenderable(new LegacySliderButton<>(0, 0, 230,16, b1 -> b1.getDefaultMessage(GAME_MODEL_LABEL,b1.getObjectValue().getLongDisplayName()),(b1)->Tooltip.create(Component.translatable("selectWorld.gameMode."+playerInfo.getGameMode().getName()+ ".info")),playerInfo.getGameMode(),()->gameTypes, b1->COMMAND_MAP.put(b1,()-> minecraft.getConnection().sendCommand("gamemode %s %s".formatted(b1.getObjectValue().getName(),profile.getName())))));
+            screen.renderableVList.addRenderable(new LegacySliderButton<>(0, 0, 230,16, b1 -> b1.getDefaultMessage(GAME_MODEL_LABEL,b1.getObjectValue().getLongDisplayName()),(b1)->null,playerInfo.getGameMode(),()->gameTypes, b1->COMMAND_MAP.put(b1,()-> minecraft.getConnection().sendCommand("gamemode %s %s".formatted(b1.getObjectValue().getName(),profile.getName())))));
             screen.renderableVList.addRenderable(Button.builder(Component.translatable("legacy.menu.host_options.set_player_spawn"),b1-> COMMAND_MAP.put(b1,()-> minecraft.player.connection.sendCommand("spawnpoint %s ~ ~ ~".formatted(profile.getName())))).bounds(0,0,215,20).build());
             screen.parent = HostOptionsScreen.this;
             screen.panel.panelSprite = LegacySprites.PANEL;
@@ -227,8 +226,6 @@ public class HostOptionsScreen extends PanelVListScreen implements Controller.Ev
             screen.renderableVList.addRenderable(new LegacySliderButton<>(0, 0, 230,16, b1 -> Component.translatable( "legacy.weather_state." + b1.getObjectValue()),b1->null,weathers.get(initialWeather),()->weathers, b1->{
                 if (!Objects.equals(b1.getObjectValue(), weathers.get(initialWeather))) COMMAND_MAP.put(b1,()-> minecraft.getConnection().sendCommand("weather " + b1.getObjectValue()));
             }));
-            for (GameRules.Key<GameRules.BooleanValue> key : OTHER_RULES)
-                screen.renderableVList.addRenderable(new TickBox(0,0,gameRules.getRule(key).get(),b1-> Component.translatable(key.getDescriptionId()),b1-> null, b1->COMMAND_MAP.put(b1,()->minecraft.player.connection.sendCommand("gamerule %s %s".formatted(key.getId(), b1.selected)))));
             minecraft.setScreen(screen);
             if (minecraft.hasSingleplayerServer() && !minecraft.getSingleplayerServer().isPublished()) return;
             BiFunction<Boolean,Component,AbstractButton> teleportButton = (bol,title)-> Button.builder(title, b1-> minecraft.setScreen(new HostOptionsScreen(title) {
