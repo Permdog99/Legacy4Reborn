@@ -45,7 +45,7 @@ public class LoadingOverlayMixin extends Overlay {
             loadIntroLocation = true;
             LegacyResourceManager.registerIntroLocations(minecraft.getResourceManager());
         }
-        float timer = (Util.getMillis() - initTime) / 3200f;
+        float timer = (Util.getMillis() - initTime) / 2200f;
         if (!finishedIntro && timer % INTROS.size() >= INTROS.size() - 0.01f && reload.isDone()) finishedIntro = true;
         if (!finishedIntro) {
             if ((InputConstants.isKeyDown(minecraft.getWindow().getWindow(), InputConstants.KEY_RETURN) || ControllerBinding.DOWN_BUTTON.bindingState.pressed) && reload.isDone() && minecraft.screen != null) finishedIntro = true;
@@ -54,7 +54,7 @@ public class LoadingOverlayMixin extends Overlay {
             guiGraphics.fill(RenderType.guiOverlay(), 0, 0, guiGraphics.guiWidth(), guiGraphics.guiHeight(), 0xFFFFFFFF);
             RenderSystem.enableBlend();
             float last = (float) Math.ceil(timer) - timer;
-            guiGraphics.setColor(1.0f, 1.0f, 1.0f, last <= 0.4f ? last * 2.5f : last > 0.6f ? (1 - last) * 2.5f : 1.0f);
+            guiGraphics.setColor(1.0f, 1.0f, 1.0f, last <= 0.05f ? last * 4.25f : last > 0.05f ? (1 - last) * 4.25f : 1.0f);
             guiGraphics.blit(INTROS.get((int) (timer % INTROS.size())), (guiGraphics.guiWidth() - guiGraphics.guiHeight() * 320 / 180) / 2, 0, 0, 0, guiGraphics.guiHeight() * 320 / 180, guiGraphics.guiHeight(), guiGraphics.guiHeight() * 320 / 180, guiGraphics.guiHeight());
             guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
             RenderSystem.disableBlend();

@@ -336,7 +336,7 @@ public class ScreenUtil {
         return Math.round(mc.getWindow().getHeight() / 180f) * 180;
     }
     public static float getTextScale(){
-        return getLegacyOptions().legacyItemTooltips().get() ? Math.max(2/3f,Math.min(720f/getStandardHeight(),4/3f)) : 1.0f;
+        return 1.0f;
     }
 
 

@@ -171,7 +171,11 @@ public abstract class GuiMixin implements ControlTooltip.Event {
                 guiGraphics.pose().pushPose();
                 ScreenUtil.applyHUDScale(guiGraphics);
                 f = ScreenUtil.getLegacyOptions().smoothAnimatedCharacter().get() ? f : 0;
-                ScreenUtil.renderEntity(guiGraphics, 28f, 50f, 13, f,new Vector3f(), new Quaternionf().rotationXYZ(0, -(Mth.lerp(f, character.yBodyRotO, character.yBodyRot) * (float)(Math.PI/180f)) + (float) (Math.PI * 7/8f), (float) Math.PI), null, character);
+                if (character.isCrouching()) {
+                    ScreenUtil.renderEntity(guiGraphics, 30f, 36f, 12, f, new Vector3f(), new Quaternionf().rotationXYZ(0, -(Mth.lerp(f, character.yBodyRotO, character.yBodyRot) * (float)(Math.PI/180f)) + (float) (Math.PI * 7/8f), (float) Math.PI), null, character);
+                } else {
+                    ScreenUtil.renderEntity(guiGraphics, 30f, 40f, 12, f,new Vector3f(), new Quaternionf().rotationXYZ(0, -(Mth.lerp(f, character.yBodyRotO, character.yBodyRot) * (float)(Math.PI/180f)) + (float) (Math.PI * 7/8f), (float) Math.PI), null, character);
+                }
                 guiGraphics.pose().popPose();
                 character.setXRot(xRot);
                 character.xRotO = xRotO;

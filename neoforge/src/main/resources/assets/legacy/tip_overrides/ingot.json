@@ -1,8 +1,0 @@
-{
-  "overrides": [
-    {
-      "items": ["#forge:ingots","!minecraft:copper"],
-      "tip": "item.minecraft.ingot.tip"
-    }
-  ]
-}

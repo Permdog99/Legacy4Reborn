@@ -22,4 +22,6 @@ public abstract class ToastComponentMixin {
     private void render(PoseStack instance, float f, float g, float h, int i){
         instance.translate((i - this.toast.width()) / 2f,-toast.height() + (50 + toast.height() + this.index * 32f) * this.getVisibility(Util.getMillis()), h);
     }
+
+
 }

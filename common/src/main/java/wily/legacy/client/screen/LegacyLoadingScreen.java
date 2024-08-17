@@ -7,6 +7,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.toasts.Toast;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import wily.legacy.client.LegacyTip;
 import wily.legacy.client.LegacyTipManager;
@@ -26,6 +28,7 @@ public class LegacyLoadingScreen extends Screen{
     public Component lastLoadingHeader;
     protected Component lastLoadingStage;
     public boolean genericLoading;
+    public static final ResourceLocation MOJANG_11_FONT = new ResourceLocation("minecraft","mojangles_11");
 
     protected RandomSource random = RandomSource.create();
     public LegacyLoadingScreen() {
@@ -76,10 +79,16 @@ public class LegacyLoadingScreen extends Screen{
         super.render(guiGraphics, i, j, f);
         int x = width / 2 - 160;
         int y = height / 2 + 16;
+        int x1 = (int) ((width / 2 - 156) / 0.75);
+        int y1 = (int) ((height / 2 + 16) * 0.75);
         if (!genericLoading) {
             if (progress != -1) {
-                if (lastLoadingStage != null)
-                    guiGraphics.drawString(minecraft.font, lastLoadingStage, x, height / 2 + 4, 16777215);
+                if (lastLoadingStage != null) {
+                    guiGraphics.pose().pushPose();
+                    guiGraphics.pose().scale(0.75f,0.75f,0.75f);
+                    guiGraphics.drawString(minecraft.font, lastLoadingStage.copy().withStyle(Style.EMPTY.withFont(MOJANG_11_FONT)), x1, (int)((height / 2 + 9) / 0.75), 16777215);
+                    guiGraphics.pose().popPose();
+                }
                 guiGraphics.blitSprite(LOADING_BACKGROUND, x, y, 320, 10);
                 if (progress >= 0)
                     guiGraphics.blitSprite(LOADING_BAR, x + 1, y + 1, (int) (318 * Math.max(0,Math.min(progress / 100F,1))), 8);
@@ -94,7 +103,7 @@ public class LegacyLoadingScreen extends Screen{
 
         guiGraphics.pose().scale(2.0F,2.0F,1.0F);
         if (lastLoadingHeader != null)
-            ScreenUtil.drawOutlinedString(guiGraphics, minecraft.font, lastLoadingHeader, (width - minecraft.font.width(lastLoadingHeader) * 2) / 4, (height / 4 - 13), 0xFFFFFF, 0, 0.5f);
+            ScreenUtil.drawOutlinedString(guiGraphics, minecraft.font, lastLoadingHeader.copy().withStyle(Style.EMPTY.withFont(MOJANG_11_FONT)), (width - minecraft.font.width(lastLoadingHeader.copy().withStyle(Style.EMPTY.withFont(MOJANG_11_FONT))) * 2) / 4, (height / 4 - 13), 0xFFFFFF, 0, 0.5f);
         guiGraphics.pose().scale(0.5F,0.5F,1.0F);
         RenderSystem.enableDepthTest();
     }
