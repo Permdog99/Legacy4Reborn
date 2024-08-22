@@ -63,6 +63,10 @@ public abstract class TitleScreenMixin extends Screen implements ControlTooltip.
     protected void init(CallbackInfo ci) {
         ci.cancel();
         super.init();
+        if (this.splash == null) {
+            assert this.minecraft != null;
+            this.splash = this.minecraft.getSplashManager().getSplash();
+        }
         renderableVList.init(this,width / 2 - 112,this.height / 3 + 10,225,0);
     }
 

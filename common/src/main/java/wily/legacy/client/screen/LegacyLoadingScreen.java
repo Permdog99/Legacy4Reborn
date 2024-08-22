@@ -10,6 +10,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
+import wily.legacy.Legacy4J;
+import wily.legacy.Legacy4JClient;
 import wily.legacy.client.LegacyTip;
 import wily.legacy.client.LegacyTipManager;
 import wily.legacy.util.ScreenUtil;
@@ -28,7 +30,10 @@ public class LegacyLoadingScreen extends Screen{
     public Component lastLoadingHeader;
     protected Component lastLoadingStage;
     public boolean genericLoading;
-    public static final ResourceLocation MOJANG_11_FONT = new ResourceLocation("minecraft","mojangles_11");
+    public static final ResourceLocation MOJANG_11_FONT = new ResourceLocation("minecraft","default_11");
+    public static final ResourceLocation MOJANG_11_FONT_SMALL = new ResourceLocation("minecraft","default_11_small");
+
+    private final Minecraft mc = Minecraft.getInstance();
 
     protected RandomSource random = RandomSource.create();
     public LegacyLoadingScreen() {
@@ -73,21 +78,28 @@ public class LegacyLoadingScreen extends Screen{
     public void renderBackground(GuiGraphics guiGraphics, int i, int j, float f) {
         ScreenUtil.renderDefaultBackground(guiGraphics,true, true);
     }
+
+    public boolean isLatinOrEnglish() {
+        if (mc.options.languageCode.equals("en_us") || mc.options.languageCode.equals("en_au") || mc.options.languageCode.equals("en_ca") || mc.options.languageCode.equals("en_gb") || mc.options.languageCode.equals("en_nz") || mc.options.languageCode.equals("en_mx") || mc.options.languageCode.equals("pl_pl") || mc.options.languageCode.equals("pt_br") || mc.options.languageCode.equals("pt_pt")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     @Override
     public void render(GuiGraphics guiGraphics, int i, int j, float f) {
         RenderSystem.disableDepthTest();
         super.render(guiGraphics, i, j, f);
         int x = width / 2 - 160;
         int y = height / 2 + 16;
-        int x1 = (int) ((width / 2 - 156) / 0.75);
+        int x1 = (int) ((width / 2 - 156));
         int y1 = (int) ((height / 2 + 16) * 0.75);
         if (!genericLoading) {
             if (progress != -1) {
                 if (lastLoadingStage != null) {
-                    guiGraphics.pose().pushPose();
-                    guiGraphics.pose().scale(0.75f,0.75f,0.75f);
-                    guiGraphics.drawString(minecraft.font, lastLoadingStage.copy().withStyle(Style.EMPTY.withFont(MOJANG_11_FONT)), x1, (int)((height / 2 + 9) / 0.75), 16777215);
-                    guiGraphics.pose().popPose();
+                    guiGraphics.drawString(minecraft.font, isLatinOrEnglish() ? lastLoadingStage.copy().withStyle(Style.EMPTY.withFont(MOJANG_11_FONT_SMALL)) : lastLoadingStage, x1, (int)((height / 2 + 10)), 16777215);
+
                 }
                 guiGraphics.blitSprite(LOADING_BACKGROUND, x, y, 320, 10);
                 if (progress >= 0)
@@ -103,7 +115,7 @@ public class LegacyLoadingScreen extends Screen{
 
         guiGraphics.pose().scale(2.0F,2.0F,1.0F);
         if (lastLoadingHeader != null)
-            ScreenUtil.drawOutlinedString(guiGraphics, minecraft.font, lastLoadingHeader.copy().withStyle(Style.EMPTY.withFont(MOJANG_11_FONT)), (width - minecraft.font.width(lastLoadingHeader.copy().withStyle(Style.EMPTY.withFont(MOJANG_11_FONT))) * 2) / 4, (height / 4 - 13), 0xFFFFFF, 0, 0.5f);
+            ScreenUtil.drawOutlinedString(guiGraphics, minecraft.font, isLatinOrEnglish() ? lastLoadingHeader.copy().withStyle(Style.EMPTY.withFont(MOJANG_11_FONT)) : lastLoadingHeader, (width - minecraft.font.width(lastLoadingHeader.copy().withStyle(Style.EMPTY.withFont(MOJANG_11_FONT))) * 2) / 4, (height / 4 - 13), 0xFFFFFF, 0, 0.5f);
         guiGraphics.pose().scale(0.5F,0.5F,1.0F);
         RenderSystem.enableDepthTest();
     }

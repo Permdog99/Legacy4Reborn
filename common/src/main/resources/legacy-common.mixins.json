@@ -23,6 +23,7 @@
     "CartographyTableScreenMixin",
     "ChatComponentMixin",
     "ChatScreenMixin",
+    "ClientLevelMixin",
     "ClientLevelSettingsMixin",
     "ClientLevelStorageSourceMixin",
     "ClientMinecraftServerMixin",
@@ -37,6 +38,7 @@
     "CycleableValueSet",
     "CyclingSlotBackgroundMixin",
     "DeathScreenMixin",
+    "DimensionSpecialEffectsMixin",
     "EditBoxMixin",
     "EffectRenderingInventoryScreenMixin",
     "EnchantmentScreenMixin",
@@ -137,7 +139,13 @@
     "StonecutterMenuMixin",
     "SugarCanesBlockMixin",
     "VillagerMixin",
-    "WitherBossMixin"
+    "WitherBossMixin",
+    "tweaks.AxeItemMixin",
+    "tweaks.BoneMealItemMixin",
+    "tweaks.GrassBlockMixin",
+    "tweaks.ShortPlantBlockMixin",
+    "tweaks.ShovelItemMixin",
+    "tweaks.SoulFireBlockMixin"
   ],
   "injectors": {
     "defaultRequire": 1

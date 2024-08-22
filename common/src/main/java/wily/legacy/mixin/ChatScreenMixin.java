@@ -46,7 +46,7 @@ public abstract class ChatScreenMixin extends Screen implements Controller.Event
     private void init(ChatScreen instance, EditBox value){
         this.input = value;
         value.setHeight(20);
-        value.setPosition(2,height - value.getHeight() + (int)(ScreenUtil.getHUDDistance() - 56));
+        value.setPosition(2,height - value.getHeight() + (int)(ScreenUtil.getHUDDistance() - 10));
         value.setWidth(width - 4);
     }
     @Redirect(method = "init",at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/EditBox;setBordered(Z)V"))
