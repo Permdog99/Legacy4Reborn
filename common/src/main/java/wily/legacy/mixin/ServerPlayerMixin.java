@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import wily.legacy.player.LegacyPlayer;
 import wily.legacy.player.LegacyPlayerInfo;
 
@@ -26,6 +27,8 @@ public abstract class ServerPlayerMixin extends Player implements LegacyPlayer, 
     @Shadow public abstract void onUpdateAbilities();
 
     @Shadow public abstract ServerStatsCounter getStats();
+
+    @Shadow protected abstract boolean isPvpAllowed();
 
     int position = -1;
     boolean classicCrafting = true;

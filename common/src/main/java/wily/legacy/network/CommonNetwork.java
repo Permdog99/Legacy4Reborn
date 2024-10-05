@@ -36,6 +36,9 @@ public interface CommonNetwork {
         public void executeWhen(BooleanSupplier supplier){
             queue.add(supplier);
         }
+        public void clear(){
+            queue.clear();
+        }
 
     }
     ResourceLocation NETWORK = new ResourceLocation(Legacy4J.MOD_ID,"network");
@@ -84,8 +87,10 @@ public interface CommonNetwork {
         register(TipCommand.Packet.class, TipCommand.Packet::decode);
         register(TipCommand.EntityPacket.class, TipCommand.EntityPacket::new);
         register(ClientAdvancementsPacket.class, ClientAdvancementsPacket::new);
-        register(ClientEntityDataSyncPacket.class, ClientEntityDataSyncPacket::new);
+        register(ClientAnimalInLoveSyncPacket.class, ClientAnimalInLoveSyncPacket::new);
         register(ServerPlayerMissHitPacket.class, ServerPlayerMissHitPacket::new);
+        register(TopMessage.Packet.class, TopMessage.Packet::decode);
+        register(ClientEffectActivationPacket.class, ClientEffectActivationPacket::new);
     }
 
     static void register(Class<? extends Packet> commonPacketClass, Function<FriendlyByteBuf, Packet> function){

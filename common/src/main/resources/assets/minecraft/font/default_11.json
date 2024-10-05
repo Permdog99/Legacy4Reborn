@@ -3,9 +3,9 @@
          {
              "type": "ttf",
              "file": "minecraft:mojangles11.ttf",
- 			"shift": [0, 0],
- 			"size": 11.0,
- 			"oversample": 32.0
+ 			"shift": [0, -3],
+ 			"size": 12.0,
+ 			"oversample": 24.0
          }
  	]
  }

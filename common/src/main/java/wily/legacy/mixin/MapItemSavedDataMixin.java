@@ -13,7 +13,6 @@ import net.minecraft.world.level.saveddata.maps.MapDecoration;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -57,14 +56,9 @@ public abstract class MapItemSavedDataMixin {
     public void tickCarriedBy(MapItemSavedData instance, MapDecoration.Type i, LevelAccessor g, String h, double b, double c, double j, Component k) {
         addDecoration(i,g,h,b,c,j,Component.literal(h));
     }
-
-
-    @Inject(method = "createFresh", at = @At("TAIL"))
-    private static void changeCreateFresh(double d, double e, byte b, boolean bl, boolean bl2, ResourceKey<Level> resourceKey, CallbackInfoReturnable<MapItemSavedData> cir) {
+    @Inject(method = "createFresh", at = @At("HEAD"), cancellable = true)
+    private static void createFresh(double d, double e, byte b, boolean bl, boolean bl2, ResourceKey<Level> resourceKey, CallbackInfoReturnable<MapItemSavedData> cir) {
         int i = 128 * (1 << b);
-        int j = Mth.floor((d + 384.0) / (double)i);
-        int k = Mth.floor((e + 384.0) / (double)i);
-        int l = j * i + i / 2 - 64;
-        int m = k * i + i / 2 - 64;
+        cir.setReturnValue(new MapItemSavedData((((int)d + (i / 2) * Mth.sign(d)) / i) * i, (((int)e + (i / 2) * Mth.sign(e)) / i) * i, b, bl, bl2, false, resourceKey));
     }
 }

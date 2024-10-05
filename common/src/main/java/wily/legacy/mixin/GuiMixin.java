@@ -7,6 +7,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
@@ -45,6 +46,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import wily.legacy.Legacy4JClient;
 import wily.legacy.client.BufferSourceWrapper;
 import wily.legacy.client.LegacyOptions;
+import wily.legacy.network.TopMessage;
 import wily.legacy.util.LegacySprites;
 import wily.legacy.client.screen.ControlTooltip;
 import wily.legacy.util.ScreenUtil;
@@ -61,17 +63,9 @@ public abstract class GuiMixin implements ControlTooltip.Event {
 
     @Shadow public abstract Font getFont();
 
-    @Shadow protected float autosaveIndicatorValue;
-
-    @Shadow protected float lastAutosaveIndicatorValue;
-
     private int lastHotbarSelection = -1;
-    private long animatedCharacterTime;
-    private long remainingAnimatedCharacterTime;
 
     @Shadow protected abstract Player getCameraPlayer();
-
-    @Shadow public abstract void render(GuiGraphics guiGraphics, float f);
 
     @Redirect(method = "renderSlot", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;getPopTime()I"))
     public int renderSlot(ItemStack instance) {
@@ -161,18 +155,19 @@ public abstract class GuiMixin implements ControlTooltip.Event {
         if (minecraft.getCameraEntity() instanceof LivingEntity character) {
             boolean hasRemainingTime = character.isSprinting() || character.isCrouching() || character.isFallFlying() || character.isVisuallySwimming() || !(character instanceof Player);
             if (((LegacyOptions) minecraft.options).animatedCharacter().get() && (hasRemainingTime || character instanceof Player p && p.getAbilities().flying) && !character.isSleeping()) {
-                animatedCharacterTime = Util.getMillis();
-                remainingAnimatedCharacterTime = hasRemainingTime ? 450 : 0;
+                ScreenUtil.animatedCharacterTime = Util.getMillis();
+                ScreenUtil.remainingAnimatedCharacterTime = hasRemainingTime ? 450 : 0;
             }
-            if (Util.getMillis() - animatedCharacterTime <= remainingAnimatedCharacterTime) {
+            if (Util.getMillis() - ScreenUtil.animatedCharacterTime <= ScreenUtil.remainingAnimatedCharacterTime) {
                 float xRot = character.getXRot();
                 float xRotO = character.xRotO;
-                if (!character.isFallFlying()) character.setXRot(character.xRotO = 0);
+                if (!character.isFallFlying()) character.setXRot(character.xRotO = -2.5f);
                 guiGraphics.pose().pushPose();
                 ScreenUtil.applyHUDScale(guiGraphics);
                 f = ScreenUtil.getLegacyOptions().smoothAnimatedCharacter().get() ? f : 0;
+                double crouchLevel = 0.125 * 2;
                 if (character.isCrouching()) {
-                    ScreenUtil.renderEntity(guiGraphics, 30f, 36f, 12, f, new Vector3f(), new Quaternionf().rotationXYZ(0, -(Mth.lerp(f, character.yBodyRotO, character.yBodyRot) * (float)(Math.PI/180f)) + (float) (Math.PI * 7/8f), (float) Math.PI), null, character);
+                    ScreenUtil.renderEntity(guiGraphics, 30f, 40f, 12, f, new Vector3f(), new Quaternionf().rotationXYZ(0, -(Mth.lerp(f, character.yBodyRotO, character.yBodyRot) * (float)(Math.PI/180f)) + (float) (Math.PI * 7/8f), (float) Math.PI), null, character);
                 } else {
                     ScreenUtil.renderEntity(guiGraphics, 30f, 40f, 12, f,new Vector3f(), new Quaternionf().rotationXYZ(0, -(Mth.lerp(f, character.yBodyRotO, character.yBodyRot) * (float)(Math.PI/180f)) + (float) (Math.PI * 7/8f), (float) Math.PI), null, character);
                 }
@@ -244,6 +239,8 @@ public abstract class GuiMixin implements ControlTooltip.Event {
         Legacy4JClient.guiBufferSourceOverride = null;
         ScreenUtil.finishHUDRender(guiGraphics);
         if (minecraft.player != null) ControlTooltip.Renderer.of(this).render(guiGraphics,0,0,f);
+        renderTopText(guiGraphics, TopMessage.small,21,1.0f,false);
+        renderTopText(guiGraphics,TopMessage.medium,37,1.5f,false);
     }
 
     @Redirect(method = "renderExperienceBar", at = @At(value = "FIELD", target = "Lnet/minecraft/client/player/LocalPlayer;experienceLevel:I", ordinal = 0))
@@ -313,5 +310,28 @@ public abstract class GuiMixin implements ControlTooltip.Event {
     public void renderAutoSaveIndicator(GuiGraphics guiGraphics, CallbackInfo ci) {
         ci.cancel();
     }
+    public void renderTopText(GuiGraphics guiGraphics,Component component, int height, float scale, boolean shadow){
+        if (component != null) {
+            RenderSystem.disableDepthTest();
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(guiGraphics.guiWidth() / 2f,height,0);
+            guiGraphics.pose().scale(scale,scale,scale);
+            guiGraphics.pose().translate(-minecraft.font.width(component) / 2f,0,0);
+            guiGraphics.drawString(minecraft.font,component,0,0,0xFFFFFF,shadow);
+            guiGraphics.pose().popPose();
+            RenderSystem.enableDepthTest();
+        }
+    }
 
+    @Redirect(method = "tick()V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;isEmpty()Z"))
+    private boolean tick(ItemStack instance) {
+        return !getTooltip(instance).equals(getTooltip(minecraft.player.getInventory().getSelected()));
+    }
+    @Redirect(method = "tick()V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;"))
+    private Object tick(OptionInstance<Double> instance) {
+        return Math.min(4,getTooltip(minecraft.player.getInventory().getSelected()).size()) * instance.get();
+    }
+    private List<Component> getTooltip(ItemStack stack){
+        return stack.getTooltipLines(minecraft.player, TooltipFlag.NORMAL);
+    }
 }

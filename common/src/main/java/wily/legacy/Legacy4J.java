@@ -1,6 +1,7 @@
 package wily.legacy;
 
 import com.mojang.brigadier.CommandDispatcher;
+import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -25,9 +26,12 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import wily.legacy.block.entity.WaterCauldronBlockEntity;
+import wily.legacy.client.LegacyOptions;
 import wily.legacy.init.*;
+import wily.legacy.inventory.LegacyIngredient;
 import wily.legacy.network.*;
 import wily.legacy.player.LegacyPlayerInfo;
+import wily.legacy.util.ArmorStandPose;
 
 import java.awt.*;
 import java.io.File;
@@ -53,6 +57,8 @@ public class Legacy4J {
 
     public static LegacyServerProperties serverProperties;
 
+    protected static Minecraft minecraft = Minecraft.getInstance();
+
     public static final String MOD_ID = "legacy";
     public static final Supplier<String> VERSION =  ()-> Legacy4JPlatform.getModInfo(MOD_ID).getVersion();
 
@@ -62,8 +68,14 @@ public class Legacy4J {
         LegacyRegistries.register();
         LegacyGameRules.init();
         CommonNetwork.register();
-
-
+        ArmorStandPose.init();
+        LegacyIngredient.init();
+    }
+    public static boolean isTU25() {
+        return ((LegacyOptions) minecraft.options).titleUpdateMode().get() == 3;
+    }
+    public static boolean isTU5() {
+        return ((LegacyOptions) minecraft.options).titleUpdateMode().get() == 2;
     }
     public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext context, Commands.CommandSelection environment){
         TipCommand.register(dispatcher,context);
@@ -259,7 +271,10 @@ public class Legacy4J {
     public static void registerBuiltInPacks(PackRegistry registry){
         registry.register("legacy_waters",true);
         registry.register("console_aspects",false);
-        if (Legacy4JPlatform.isForgeLike()) registry.register("programmer_art","programmer_art", Component.translatable("legacy.builtin.console_programmer"), Pack.Position.TOP,false);
+        if (Legacy4JPlatform.getLoader().isForgeLike()) {
+            registry.register("programmer_art", "programmer_art", Component.translatable("legacy.builtin.console_programmer"), Pack.Position.TOP, false);
+            registry.register("high_contrast", "high_contrast", Component.translatable("legacy.builtin.high_contrast"), Pack.Position.TOP, false);
+        }
     }
 
     public static void onServerPlayerJoin(ServerPlayer p){
@@ -278,6 +293,7 @@ public class Legacy4J {
         }
         ((LegacyPlayerInfo)p).setPosition(pos);
         CommonNetwork.sendToPlayer(p, new PlayerInfoSync.All(Map.of(p.getUUID(),(LegacyPlayerInfo)p), Collections.emptyMap(),p.server.getDefaultGameType()));
+        if (!p.server.isDedicatedServer()) Legacy4JClient.serverPlayerJoin(p);
     }
     public static void copySaveToDirectory(InputStream stream, File directory){
         try (ZipInputStream inputStream = new ZipInputStream(stream))

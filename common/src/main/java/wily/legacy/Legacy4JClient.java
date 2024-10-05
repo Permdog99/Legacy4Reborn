@@ -2,16 +2,19 @@ package wily.legacy;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.math.Axis;
 import com.mojang.serialization.JsonOps;
 import dev.architectury.injectables.annotations.ExpectPlatform;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
+import net.minecraft.client.User;
 import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.client.color.item.ItemColor;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineLabel;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.client.gui.navigation.ScreenDirection;
 import net.minecraft.client.gui.screens.*;
@@ -19,12 +22,14 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.worldselection.PresetEditor;
+import net.minecraft.client.main.GameConfig;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.resources.SplashManager;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.client.server.LanServerPinger;
 import net.minecraft.client.tutorial.TutorialSteps;
@@ -42,12 +47,14 @@ import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.util.HttpUtil;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.GameType;
@@ -65,6 +72,7 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.level.levelgen.structure.StructureSet;
+import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -96,6 +104,8 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import wily.legacy.util.MCAccount;
+import java.util.function.Predicate;
 
 import static wily.legacy.Legacy4J.MOD_ID;
 import static wily.legacy.init.LegacyRegistries.SHRUB;
@@ -110,14 +120,19 @@ public class Legacy4JClient {
         }
     };
 
+    public static String lastLoadedVersion = "";
+    public static LevelStorageSource currentWorldSource;
+    public static ResourceLocation defaultFontOverride = null;
     public static boolean legacyFont = true;
+    public static boolean forceVanillaFontShadowColor = false;
     public static boolean canLoadVanillaOptions = true;
     public static boolean manualSave = false;
+    public static boolean saveExit = false;
     public static boolean retakeWorldIcon = false;
-    public static boolean deleteLevelWhenExitWithoutSaving = false;
     public static final Map<Component, Component> OPTION_BOOLEAN_CAPTION = Map.of(Component.translatable("key.sprint"),Component.translatable("options.key.toggleSprint"),Component.translatable("key.sneak"),Component.translatable("options.key.toggleSneak"));
     public static LegacyLoadingScreen legacyLoadingScreen = new LegacyLoadingScreen();
     public static MultiBufferSource.BufferSource guiBufferSourceOverride = null;
+    public static Renderable itemActivationRenderReplacement = null;
     public static final LegacyTipManager legacyTipManager = new LegacyTipManager();
     public static final LegacyCreativeTabListing.Manager legacyCreativeListingManager = new LegacyCreativeTabListing.Manager();
     public static final LegacyCraftingTabListing.Manager legacyCraftingListingManager = new LegacyCraftingTabListing.Manager();
@@ -135,7 +150,7 @@ public class Legacy4JClient {
     public static KnownListing<Block> knownBlocks;
     public static KnownListing<EntityType<?>> knownEntities;
     public static GameType defaultServerGameType;
-    public static Consumer<IntegratedServer> startServerConsumer;
+    public static Consumer<ServerPlayer> serverPlayerJoinConsumer;
 
     public static PostChain gammaEffect;
     public static int[] MAP_PLAYER_COLORS = new int[]{0xFFFFFF,0x00FF4C,0xFF2119,0x6385FF,0xFF63D9,0xFF9C00,0xFFFB19,0x63FFE4};
@@ -165,7 +180,32 @@ public class Legacy4JClient {
         if (minecraft.screen instanceof LeaderboardsScreen s && LeaderboardsScreen.statsBoards.get(s.selectedStatBoard).statsList.isEmpty()) minecraft.executeIfPossible(()-> s.changeStatBoard(false));
         if (minecraft.player != null) CommonNetwork.sendToServer(new PlayerInfoSync(ScreenUtil.hasClassicCrafting() ? 1 : 2,minecraft.player));
     }
-
+    public static void displayActivationAnimation(Renderable renderable){
+        itemActivationRenderReplacement = renderable;
+        Minecraft.getInstance().gameRenderer.displayItemActivation(ItemStack.EMPTY);
+    }
+    public static void applyFontOverrideIf(boolean b, ResourceLocation override, Consumer<Boolean> fontRender){
+        if (b) defaultFontOverride = override;
+        fontRender.accept(b);
+        if (b) defaultFontOverride = null;
+    }
+    public static void saveLevel(LevelStorageSource.LevelStorageAccess storageSource){
+        if (storageSource.parent() == Legacy4JClient.currentWorldSource) Legacy4JClient.copySaveBtwSources(storageSource,Minecraft.getInstance().getLevelSource());
+    }
+    public static void displayEffectActivationAnimation(MobEffect mobEffect){
+        displayActivationAnimation(((guiGraphics, i, j, f) -> {
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().scale(0.5f,0.5f,0.5f);
+            guiGraphics.blit(0, 1, 0, 1, -1, Minecraft.getInstance().getMobEffectTextures().get(mobEffect));
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(0.5f,0.5f,0);
+            guiGraphics.pose().mulPose(Axis.ZP.rotationDegrees(180));
+            guiGraphics.pose().translate(-0.5f,-0.5f,0);
+            guiGraphics.blit(0, 0, 0, 1, 1, Minecraft.getInstance().getMobEffectTextures().get(mobEffect));
+            guiGraphics.pose().popPose();
+            guiGraphics.pose().popPose();
+        }));
+    }
 
     public static final Map<Optional<ResourceKey<WorldPreset>>,PresetEditor> VANILLA_PRESET_EDITORS = new HashMap<>(Map.of(Optional.of(WorldPresets.FLAT), (createWorldScreen, settings) -> {
         ChunkGenerator chunkGenerator = settings.selectedDimensions().overworld();
@@ -184,8 +224,8 @@ public class Legacy4JClient {
         else if (screen instanceof AlertScreen s) {
             MultiLineLabel messageLines = MultiLineLabel.create(Minecraft.getInstance().font,s.messageText,200);
             return new ConfirmationScreen(Minecraft.getInstance().screen, 230, 97 + messageLines.getLineCount() * 12, s.getTitle(), messageLines, b -> true) {
-                protected void initButtons() {
-                    okButton = addRenderableWidget(Button.builder(Component.translatable("gui.ok"), b -> s.callback.run()).bounds(panel.x + 15, panel.y + panel.height - 30, 200, 20).build());
+                protected void addButtons() {
+                    renderableVList.addRenderable(okButton = Button.builder(Component.translatable("gui.ok"), b -> s.callback.run()).bounds(panel.x + 15, panel.y + panel.height - 30, 200, 20).build());
                 }
                 public boolean shouldCloseOnEsc() {
                     return s.shouldCloseOnEsc();
@@ -195,13 +235,13 @@ public class Legacy4JClient {
             MultiLineLabel messageLines = MultiLineLabel.create(Minecraft.getInstance().font,s.description,200);
             return new ConfirmationScreen(Minecraft.getInstance().screen, 230, 141 + messageLines.getLineCount() * 12 + (s.promptForCacheErase ? 14 : 0), s.getTitle(), messageLines, b -> true) {
                 boolean eraseCache = false;
-                protected void initButtons() {
-                    if (s.promptForCacheErase) addRenderableWidget(new TickBox(panel.x + 15, panel.y + panel.height - 88,eraseCache,b->Component.translatable("selectWorld.backupEraseCache"),b->null,b-> eraseCache = b.selected));
-                    okButton = addRenderableWidget(Button.builder(Component.translatable("selectWorld.backupJoinConfirmButton"), b -> s.onProceed.proceed(true, eraseCache)).bounds(panel.x + 15, panel.y + panel.height - 74, 200, 20).build());
-                    addRenderableWidget(Button.builder(Component.translatable("selectWorld.backupJoinSkipButton"), b -> s.onProceed.proceed(false, eraseCache)).bounds(panel.x + 15, panel.y + panel.height - 52, 200, 20).build());
-                    addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> s.onCancel.run()).bounds(panel.x + 15, panel.y + panel.height - 30, 200, 20).build());
+                protected void addButtons() {
+                    if (s.promptForCacheErase)
+                        renderableVList.addRenderable(new TickBox(panel.x + 15, panel.y + panel.height - 88, eraseCache, b -> Component.translatable("selectWorld.backupEraseCache"), b -> null, b -> eraseCache = b.selected));
+                    renderableVList.addRenderable(okButton = Button.builder(Component.translatable("selectWorld.backupJoinConfirmButton"), b -> s.onProceed.proceed(true, eraseCache)).bounds(panel.x + 15, panel.y + panel.height - 74, 200, 20).build());
+                    renderableVList.addRenderable(Button.builder(Component.translatable("selectWorld.backupJoinSkipButton"), b -> s.onProceed.proceed(false, eraseCache)).bounds(panel.x + 15, panel.y + panel.height - 52, 200, 20).build());
+                    renderableVList.addRenderable(Button.builder(CommonComponents.GUI_CANCEL, b -> s.onCancel.run()).bounds(panel.x + 15, panel.y + panel.height - 30, 200, 20).build());
                 }
-
                 @Override
                 public void onClose() {
                     s.onCancel.run();
@@ -244,7 +284,6 @@ public class Legacy4JClient {
         registry.accept(leaderBoardListingManager);
     }
     public static void serverSave(MinecraftServer server){
-        deleteLevelWhenExitWithoutSaving = false;
         Legacy4JClient.retakeWorldIcon = true;
         knownBlocks.save();
         knownEntities.save();
@@ -252,28 +291,27 @@ public class Legacy4JClient {
     public static void clientStopping(Minecraft minecraft){
         knownBlocks.save();
         knownEntities.save();
+        Assort.applyDefaultResourceAssort();
     }
     public static void preServerTick(MinecraftServer server){
-        server.getAllLevels().forEach(l-> l.noSave = ScreenUtil.getLegacyOptions().autoSaveInterval().get() == 0);
     }
     public static void postTick(Minecraft minecraft){
-        if (minecraft.level != null && minecraft.screen == null && ((LegacyOptions)minecraft.options).hints().get()) {
+        if (minecraft.level != null && minecraft.screen == null && ((LegacyOptions)minecraft.options).hints().get() && LegacyTipManager.getActualTip() == null) {
             HitResult hit = minecraft.hitResult;
             if (hit instanceof BlockHitResult blockHitResult) {
                 BlockState state = minecraft.level.getBlockState(blockHitResult.getBlockPos());
                 if (!state.isAir() && !(state.getBlock() instanceof LiquidBlock) && state.getBlock().asItem() instanceof BlockItem) {
-                    if (!knownBlocks.contains(state.getBlock())) ScreenUtil.addTip(state.getBlock().asItem().getDefaultInstance());
-                    knownBlocks.add(state.getBlock());
+                    if (!knownBlocks.contains(state.getBlock()) && LegacyTipManager.setTip(LegacyTipManager.getTip(state.getBlock().asItem().getDefaultInstance()))) knownBlocks.add(state.getBlock());
                 }
             } else if (hit instanceof EntityHitResult r){
                 Entity e = r.getEntity();
-                if (!knownEntities.contains(e.getType())) ScreenUtil.addTip(e);
-                knownEntities.add(e.getType());
+                if (!knownEntities.contains(e.getType()) && LegacyTipManager.setTip(LegacyTipManager.getTip(e))) knownEntities.add(e.getType());
             }
         }
     }
     public static void preTick(Minecraft minecraft){
         SECURE_EXECUTOR.executeAll();
+        if (((LegacyOptions)minecraft.options).unfocusedInputs().get()) minecraft.setWindowActive(true);
         while (keyCrafting.consumeClick()){
             if (minecraft.gameMode != null && minecraft.gameMode.hasInfiniteItems()) {
                 minecraft.setScreen(CreativeModeScreen.getActualCreativeScreenInstance(minecraft));
@@ -315,14 +353,16 @@ public class Legacy4JClient {
         LegacyCreativeTabListing.rebuildVanillaCreativeTabsItems(minecraft);
     }
     public static void serverPlayerJoin(ServerPlayer player){
-        if (startServerConsumer != null) {
-            startServerConsumer.accept((IntegratedServer) player.server);
-            startServerConsumer = null;
+        if (serverPlayerJoinConsumer != null) {
+            serverPlayerJoinConsumer.accept(player);
+            serverPlayerJoinConsumer = null;
         }
     }
     public static void init() {
         knownBlocks = new KnownListing<>(BuiltInRegistries.BLOCK,Minecraft.getInstance().gameDirectory.toPath());
         knownEntities = new KnownListing<>(BuiltInRegistries.ENTITY_TYPE,Minecraft.getInstance().gameDirectory.toPath());
+        currentWorldSource = LevelStorageSource.createDefault(Minecraft.getInstance().gameDirectory.toPath().resolve("current-world"));
+        MCAccount.loadAll();
     }
     public static boolean isModEnabledOnServer(){
         Minecraft minecraft = Minecraft.getInstance();
@@ -383,7 +423,6 @@ public class Legacy4JClient {
     public static KeyMapping keyFlyLeft = new KeyMapping( MOD_ID +".key.flyLeft", InputConstants.KEY_LEFT, "key.categories.movement");
     public static KeyMapping keyFlyRight = new KeyMapping( MOD_ID +".key.flyRight", InputConstants.KEY_RIGHT, "key.categories.movement");
     public static void resetVanillaOptions(Minecraft minecraft){
-        PackRepository repo = minecraft.getResourcePackRepository();
         canLoadVanillaOptions = false;
         minecraft.options = new Options(minecraft,minecraft.gameDirectory);
         ((LegacyOptions) minecraft.options).hudOpacity().set(1.0);
@@ -394,8 +433,10 @@ public class Legacy4JClient {
         ((LegacyOptions) minecraft.options).hints().set(true);
         ((LegacyOptions) minecraft.options).vignette().set(false);
         ((LegacyOptions) minecraft.options).createWorldDifficulty().set(Difficulty.byId(2));
-        ((LegacyOptions) minecraft.options).forceYellowText().set(true);
         ((LegacyOptions) minecraft.options).legacyGamma().set(0.5);
+        ((LegacyOptions) minecraft.options).autoSaveInterval().set(1);
+        ((LegacyOptions) minecraft.options).autoSaveWhenPaused().set(true);
+        ((LegacyOptions) minecraft.options).titleUpdateMode().set(Integer.parseInt(Component.translatable("legacy.options.titleUpdateMode.set").toString()));
         minecraft.options.autoJump().set(false);
         minecraft.options.operatorItemsTab().set(false);
         minecraft.options.realmsNotifications().set(false);
@@ -410,32 +451,49 @@ public class Legacy4JClient {
         minecraft.options.keySwapOffhand.setKey(InputConstants.UNKNOWN);
         minecraft.options.tutorialStep = TutorialSteps.NONE;
         minecraft.options.joinedFirstServer = true;
-        repo.addPack("programmer_art");
+        Assort.applyDefaultResourceAssort();
         minecraft.options.save();
         minecraft.reloadResourcePacks();
         canLoadVanillaOptions = true;
     }
-    public static String manageAvailableSaveDirName(Minecraft minecraft, Consumer<File> copy, String saveDirName){
+    public static String manageAvailableSaveDirName(Consumer<File> copy, Predicate<String> exists, LevelStorageSource source, String levelId){
+        String destId = manageAvailableName(exists,levelId);
+        copy.accept(source.getLevelPath(destId).toFile());
+        return destId;
+    }
+    public static String manageAvailableName(Predicate<String> exists, String saveDirName){
         StringBuilder builder = new StringBuilder(saveDirName);
-        int levelRepeat = 0;
-        while (minecraft.getLevelSource().levelExists(builder +(levelRepeat > 0 ? String.format(" (%s)",levelRepeat) : "")))
-            levelRepeat++;
-        if (levelRepeat > 0)
-            builder.append(String.format(" (%s)",levelRepeat));
-        copy.accept(new File(minecraft.gameDirectory, "saves/" + builder));
+        int repeat = 0;
+        while (exists.test(builder +(repeat > 0 ? String.format(" (%s)",repeat) : "")))
+            repeat++;
+        if (repeat > 0)
+            builder.append(String.format(" (%s)",repeat));
         return builder.toString();
     }
-    public static String importSaveFile(Minecraft minecraft, InputStream saveInputStream, String saveDirName){
-        return manageAvailableSaveDirName(minecraft, f-> Legacy4J.copySaveToDirectory(saveInputStream,f),saveDirName);
+    public static String importSaveFile(InputStream saveInputStream,Predicate<String> exists, LevelStorageSource source, String saveDirName){
+        return manageAvailableSaveDirName(f-> Legacy4J.copySaveToDirectory(saveInputStream,f),exists,source,saveDirName);
     }
-    public static String copySaveFile(Minecraft minecraft, Path savePath, String saveDirName){
-        return manageAvailableSaveDirName(minecraft, f-> {
+    public static String importSaveFile(InputStream saveInputStream, LevelStorageSource source, String saveDirName){
+        return importSaveFile(saveInputStream,source::levelExists,source,saveDirName);
+    }
+    public static String copySaveFile(Path savePath, LevelStorageSource source, String saveDirName){
+        return manageAvailableSaveDirName(f-> {
             try {
                 FileUtils.copyDirectory(savePath.toFile(),f);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        },saveDirName);
+        },source::levelExists,source,saveDirName);
+    }
+
+    public static void copySaveBtwSources(LevelStorageSource.LevelStorageAccess sendSource, LevelStorageSource destSource){
+        try (LevelStorageSource.LevelStorageAccess access = destSource.createAccess(sendSource.getLevelId())) {
+            File destLevelDirectory = access.getLevelDirectory().path().toFile();
+            if (destLevelDirectory.exists()) FileUtils.deleteQuietly(destLevelDirectory);
+            FileUtils.copyDirectory(sendSource.getLevelDirectory().path().toFile(), destLevelDirectory, p -> !p.getName().equals("session.lock"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
     public static void registerExtraModels(Consumer<ResourceLocation> register){
 

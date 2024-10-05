@@ -4,15 +4,18 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.flag.FeatureFlagSet;
+import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelTimeAccess;
@@ -37,6 +40,8 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Redirect;
+import wily.legacy.client.LegacyBiomeOverride;
 
 import java.util.List;
 import java.util.Objects;
@@ -47,6 +52,16 @@ import java.util.function.Supplier;
 public abstract class ClientLevelMixin extends Level {
     protected ClientLevelMixin(WritableLevelData writableLevelData, ResourceKey<Level> resourceKey, RegistryAccess registryAccess, Holder<DimensionType> holder, Supplier<ProfilerFiller> supplier, boolean bl, boolean bl2, long l, int i) {
         super(writableLevelData, resourceKey, registryAccess, holder, supplier, bl, bl2, l, i);
+    }
+
+    private ClientLevel self(){
+        return (ClientLevel) (Object) this;
+    }
+    @Redirect(method = "calculateBlockTint",at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/ColorResolver;getColor(Lnet/minecraft/world/level/biome/Biome;DD)I"))
+    public int calculateBlockTint(ColorResolver instance, Biome biome, double x, double z, BlockPos pos) {
+        BlockPos.MutableBlockPos m = pos.mutable();
+        LegacyBiomeOverride o = LegacyBiomeOverride.getOrDefault(self().getBiome(m.setX((int) x).setZ((int) z)).unwrapKey());
+        return instance == BiomeColors.WATER_COLOR_RESOLVER && self().getFluidState(m).is(FluidTags.WATER) && o.waterColor() != null ? o.waterColor() : instance.getColor(biome,x,z);
     }
 
     /**

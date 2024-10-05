@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class PanelVListScreenNoTitle extends PanelBackgroundScreen{
+public class PanelVListScreenNoTitle extends PanelBackgroundScreen implements RenderableVList.Access{
     protected final RenderableVList renderableVList = new RenderableVList();
     public Consumer<PanelVListScreenNoTitle> onClose = s->{};
     public PanelVListScreenNoTitle(Function<Screen,Panel> panelConstructor, Component component) {

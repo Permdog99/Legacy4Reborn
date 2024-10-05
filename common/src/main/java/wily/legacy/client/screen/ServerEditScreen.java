@@ -43,8 +43,8 @@ public class ServerEditScreen extends ConfirmationScreen{
         this.nameBox.setValue(string2);
     }
     @Override
-    protected void initButtons() {
-        super.initButtons();
+    protected void init() {
+        super.init();
         nameBox = new EditBox(font, width / 2 - 100,panel.y + 47,200, 20, Component.empty());
         ipBox = new EditBox(font, width / 2 - 100,panel.y + 87,200, 20, Component.translatable("addServer.enterIp"));
         nameBox.setValue(serverData.name);

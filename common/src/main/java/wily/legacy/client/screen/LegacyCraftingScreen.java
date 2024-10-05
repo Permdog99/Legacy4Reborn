@@ -22,12 +22,15 @@ import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.entity.*;
 import org.jetbrains.annotations.Nullable;
+import wily.legacy.Legacy4JClient;
 import wily.legacy.Legacy4JPlatform;
 import wily.legacy.client.CommonColor;
 import wily.legacy.client.ControlType;
 import wily.legacy.client.LegacyCraftingTabListing;
+import wily.legacy.client.LegacyTipManager;
 import wily.legacy.client.controller.ControllerBinding;
 import wily.legacy.init.LegacyRegistries;
+import wily.legacy.inventory.NBTIngredient;
 import wily.legacy.util.*;
 import wily.legacy.client.controller.BindingState;
 import wily.legacy.client.controller.Controller;
@@ -62,13 +65,14 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
     public static final Component SELECT_STAR_TAB = Component.translatable("legacy.container.tab.select_star");
     public static final Component ADD_FADE_TAB = Component.translatable("legacy.container.tab.add_fade");
     public static final Component ADD_POWER_TAB = Component.translatable("legacy.container.tab.add_power");
-    public static final Component SELECT_SHIELD_BANNER = Component.translatable("legacy.container.tab.select_shield_banner");
+    public static final Component SELECT_SHIELD = Component.translatable("legacy.container.tab.select_shield");
     public static final Component COPY_BANNER = Component.translatable("legacy.container.tab.copy_banner");
     public static final Component ADD_SHERD = Component.translatable("legacy.container.tab.add_pottery_sherd");
     protected final List<RecipeIconHolder<CraftingRecipe>> craftingButtons = new ArrayList<>();
     protected final List<CustomRecipeIconHolder> dyeItemButtons = new ArrayList<>();
     protected final List<CustomRecipeIconHolder> dyeArmorButtons = new ArrayList<>();
-    protected final List<CustomRecipeIconHolder> dyeBannerButtons = new ArrayList<>();
+    protected final List<CustomRecipeIconHolder> copyBannerButtons = new ArrayList<>();
+    protected final List<CustomRecipeIconHolder> decorateShieldButtons = new ArrayList<>();
     protected final List<CustomRecipeIconHolder> decoratedPotButtons = new ArrayList<>();
     protected final List<CustomRecipeIconHolder> fireworkStarButtons = new ArrayList<>();
     protected final List<CustomRecipeIconHolder> fireworkStarFadeButtons = new ArrayList<>();
@@ -78,10 +82,12 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
     protected final Stocker.Sizeable page =  new Stocker.Sizeable(0);
     protected final Stocker.Sizeable craftingButtonsOffset =  new Stocker.Sizeable(0);
     protected final TabList craftingTabList;
+    protected final TabList bannerTabList = new TabList();
     protected final TabList fireworkTabList = new TabList();
     protected final TabList dyeTabList = new TabList();
     protected final TabList groupTabList = new TabList().add(0,0,0, 0, 4, (Function<LegacyTabButton, Renderable>) null,Component.empty(),null, b->repositionElements());
     protected final LegacyScrollRenderer scrollRenderer = new LegacyScrollRenderer();
+    protected final ScrollableRenderer scrollableRenderer = new ScrollableRenderer();
     private final boolean[] warningSlots;
     protected final ContainerListener listener = new ContainerListener() {
         public void slotChanged(AbstractContainerMenu abstractContainerMenu, int i, ItemStack itemStack) {
@@ -153,12 +159,13 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
         CompoundTag explosionTag = new CompoundTag();
         redStarTag.put("Explosion",explosionTag);
         explosionTag.putIntArray("Colors", List.of(DyeColor.RED.getFireworkColor()));
+        bannerTabList.add(0,0,0,43,0,LegacyTabButton.iconOf(Items.WHITE_BANNER), Component.empty(),null, b-> resetElements());
+        bannerTabList.add(0,0,0,43,0,LegacyTabButton.iconOf(Items.SHIELD), Component.empty(),null, b-> resetElements());
         fireworkTabList.add(0,0,0,43,0,LegacyTabButton.iconOf(Items.FIREWORK_STAR), Component.empty(),null, b-> resetElements());
         fireworkTabList.add(0,0,0,43,0,LegacyTabButton.iconOf(redStar), Component.empty(),null, b-> resetElements());
         fireworkTabList.add(0,0,0,43,0,LegacyTabButton.iconOf(Items.FIREWORK_ROCKET), Component.empty(),null, b-> resetElements());
         dyeTabList.add(0,0,0,43,0,LegacyTabButton.iconOf(DyeableLeatherItem.dyeArmor(Items.LEATHER_CHESTPLATE.getDefaultInstance(),List.of((DyeItem) Items.GREEN_DYE))), Component.empty(),null, b-> resetElements());
         dyeTabList.add(0,0,0,43,0,groupTabList.tabButtons.get(2).icon, Component.empty(),null, b-> resetElements());
-        dyeTabList.add(0,0,0,43,0,LegacyTabButton.iconOf(Items.WHITE_BANNER), Component.empty(),null, b-> resetElements());
         if (!is2x2) dyeTabList.add(0,0,0,43,0,LegacyTabButton.iconOf(Items.DECORATED_POT), Component.empty(),null, b-> resetElements());
 
         Consumer<CustomCraftingIconHolder> fireworkStarUpdateRecipe = h->{
@@ -183,7 +190,7 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
             clearIngredients(ingredientsGrid);
             if (fireworkStarFadeButtons.isEmpty()) return;
             ItemStack item = fireworkStarFadeButtons.get(0).itemIcon.isEmpty() ? Items.FIREWORK_STAR.getDefaultInstance() : fireworkStarFadeButtons.get(0).itemIcon;
-            LegacyCraftingMenu.updateShapedIngredients(ingredientsGrid,List.of(Ingredient.EMPTY,Ingredient.of(fireworkStarFadeButtons.get(1).itemIcon),Ingredient.EMPTY, Legacy4JPlatform.getStrictNBTIngredient(item)),gridDimension,2,2,2);
+            LegacyCraftingMenu.updateShapedIngredients(ingredientsGrid,List.of(Ingredient.EMPTY,Ingredient.of(fireworkStarFadeButtons.get(1).itemIcon),Ingredient.EMPTY, NBTIngredient.of(true,item)),gridDimension,2,2,2);
             fireworkStarFadeButtons.get(1).applyAddedIngredients();
             resultStack = item.copy();
             if (fireworkStarFadeButtons.get(1).hasItem()) resultStack.getOrCreateTagElement("Explosion").putIntArray("FadeColors", Stream.concat(Stream.of(fireworkStarFadeButtons.get(1).itemIcon),fireworkStarFadeButtons.get(1).addedIngredientsItems.stream()).map(i->((DyeItem)i.getItem()).getDyeColor().getFireworkColor()).toList());
@@ -211,7 +218,7 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
             clearIngredients(ingredientsGrid);
             if (dyeArmorButtons.isEmpty()) return;
             ItemStack armor = dyeArmorButtons.get(0).itemIcon.isEmpty() ? Items.LEATHER_HELMET.getDefaultInstance() : dyeArmorButtons.get(0).itemIcon;
-            LegacyCraftingMenu.updateShapedIngredients(ingredientsGrid,List.of(Ingredient.EMPTY,Ingredient.of(dyeArmorButtons.get(1).itemIcon),Ingredient.EMPTY, Legacy4JPlatform.getStrictNBTIngredient(armor)),gridDimension,2,2,2);
+            LegacyCraftingMenu.updateShapedIngredients(ingredientsGrid,List.of(Ingredient.EMPTY,Ingredient.of(dyeArmorButtons.get(1).itemIcon),Ingredient.EMPTY, NBTIngredient.of(true,armor)),gridDimension,2,2,2);
             DyeItem dye = dyeArmorButtons.get(1).itemIcon.getItem() instanceof DyeItem i ? i : (DyeItem) Items.WHITE_DYE;
             dyeArmorButtons.forEach(CustomRecipeIconHolder::applyAddedIngredients);
             resultStack = dyeArmorButtons.get(0).itemIcon.isEmpty() || !dyeArmorButtons.get(1).hasItem() ? armor : DyeableLeatherItem.dyeArmor(armor,Stream.concat(Stream.of(dye), dyeArmorButtons.get(1).addedIngredientsItems.stream().map(stack->(DyeItem)stack.getItem())).toList());
@@ -221,7 +228,7 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
             clearIngredients(ingredientsGrid);
             if (dyeItemButtons.isEmpty()) return;
             ItemStack item = dyeItemButtons.get(0).itemIcon.isEmpty() ? Items.WHITE_BED.getDefaultInstance() : dyeItemButtons.get(0).itemIcon;
-            LegacyCraftingMenu.updateShapedIngredients(ingredientsGrid,List.of(Ingredient.EMPTY,Ingredient.of(dyeItemButtons.get(1).itemIcon),Ingredient.EMPTY, Legacy4JPlatform.getStrictNBTIngredient(item)),gridDimension,2,2,2);
+            LegacyCraftingMenu.updateShapedIngredients(ingredientsGrid,List.of(Ingredient.EMPTY,Ingredient.of(dyeItemButtons.get(1).itemIcon),Ingredient.EMPTY, NBTIngredient.of(true,item)),gridDimension,2,2,2);
             DyeItem dye = dyeItemButtons.get(1).itemIcon.getItem() instanceof DyeItem i ? i : (DyeItem) Items.WHITE_DYE;
             ResourceLocation location = BuiltInRegistries.ITEM.getKey(item.getItem());
             String path = location.getPath();
@@ -245,27 +252,33 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
         dyeArmorButtons.add(craftingButtonByList(COLOR_TAB, dyes,dyeArmorUpdateRecipe).enableAddIngredients());
         dyeItemButtons.add(craftingButtonByPredicate(Component.translatable("entity.minecraft.item"),i-> i.getItem() instanceof BedItem || (i.getItem() instanceof BlockItem b &&  b.getBlock() instanceof ShulkerBoxBlock),dyeItemUpdateRecipe));
         dyeItemButtons.add(craftingButtonByList(COLOR_TAB, dyes,dyeItemUpdateRecipe));
-        dyeBannerButtons.add(craftingButtonByPredicate(COPY_BANNER,i-> i.getItem() instanceof BannerItem && itemHasPatterns(i), h->{
+        copyBannerButtons.add(craftingButtonByPredicate(COPY_BANNER, i-> i.getItem() instanceof BannerItem && itemHasPatterns(i,true), h->{
             clearIngredients(ingredientsGrid);
-            if (dyeBannerButtons.isEmpty()) return;
-            LegacyCraftingMenu.updateShapedIngredients(ingredientsGrid,List.of(Ingredient.EMPTY,Ingredient.EMPTY,Legacy4JPlatform.getStrictNBTIngredient(h.itemIcon.getItem().getDefaultInstance()),Legacy4JPlatform.getStrictNBTIngredient(h.itemIcon)),gridDimension,2,2,2);
+            if (decorateShieldButtons.isEmpty()) return;
+            LegacyCraftingMenu.updateShapedIngredients(ingredientsGrid,List.of(Ingredient.EMPTY,Ingredient.EMPTY, NBTIngredient.of(true,h.itemIcon.getItem().getDefaultInstance()), NBTIngredient.of(true,h.itemIcon.copyWithCount(1))),gridDimension,2,2,2);
             resultStack = h.itemIcon.copyWithCount(1);
             canCraft(ingredientsGrid,true);
         }));
 
-        dyeBannerButtons.add(craftingButtonByPredicate(SELECT_SHIELD_BANNER, i-> i.getItem() instanceof BannerItem, h->{
+        Consumer<CustomCraftingIconHolder> decorateShieldUpdateRecipe = h-> {
             clearIngredients(ingredientsGrid);
-            if (dyeBannerButtons.isEmpty()) return;
-            LegacyCraftingMenu.updateShapedIngredients(ingredientsGrid,List.of(Ingredient.EMPTY,Ingredient.EMPTY,Legacy4JPlatform.getStrictNBTIngredient(Items.SHIELD.getDefaultInstance()),Legacy4JPlatform.getStrictNBTIngredient(h.itemIcon)),gridDimension,2,2,2);
-            resultStack = Items.SHIELD.getDefaultInstance();
-            if (h.itemIcon.getItem() instanceof BannerItem b){
+            if (decorateShieldButtons.isEmpty()) return;
+
+            resultStack = decorateShieldButtons.get(0).itemIcon.isEmpty() ? Items.SHIELD.getDefaultInstance() : decorateShieldButtons.get(0).itemIcon.copyWithCount(1);
+
+            LegacyCraftingMenu.updateShapedIngredients(ingredientsGrid,List.of(Ingredient.EMPTY,Ingredient.EMPTY, NBTIngredient.of(true,resultStack.copy()), NBTIngredient.of(true,decorateShieldButtons.get(1).itemIcon.isEmpty() ? Items.WHITE_BANNER.getDefaultInstance() : decorateShieldButtons.get(1).itemIcon.copyWithCount(1))),gridDimension,2,2,2);
+
+            if (decorateShieldButtons.get(1).itemIcon.getItem() instanceof BannerItem b){
                 CompoundTag compoundTag = BlockItem.getBlockEntityData(h.itemIcon);
                 CompoundTag compoundTag2 = compoundTag == null ? new CompoundTag() : compoundTag.copy();
                 compoundTag2.putInt("Base", b.getColor().getId());
                 BlockItem.setBlockEntityData(resultStack, BlockEntityType.BANNER, compoundTag2);
             }
             canCraft(ingredientsGrid,true);
-        }));
+        };
+        decorateShieldButtons.add(craftingButtonByPredicate(SELECT_SHIELD, i-> i.getItem() instanceof ShieldItem && !itemHasPatterns(i,false), decorateShieldUpdateRecipe));
+        decorateShieldButtons.add(craftingButtonByPredicate(LegacyLoomScreen.SELECT_BANNER_TAB, i-> i.getItem() instanceof BannerItem, decorateShieldUpdateRecipe));
+
         decoratedPotButtons.add(craftingButtonByList(ADD_SHERD, DecoratedPotPatterns.ITEM_TO_POT_TEXTURE.keySet().stream().map(Item::getDefaultInstance).toList(),h->{
             clearIngredients(ingredientsGrid);
             if (is2x2) return;
@@ -295,9 +308,9 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
         craftingButtonsOffset.set(0);
         if (inited) repositionElements();
     }
-    public static boolean itemHasPatterns(ItemStack stack){
+    public static boolean itemHasPatterns(ItemStack stack, boolean limitAmount){
         CompoundTag beTag = stack.getTagElement("BlockEntityTag");
-        return stack.getItem() instanceof BannerItem && (beTag != null && beTag.contains("Patterns") && !beTag.getList("Patterns",10).isEmpty());
+        return stack.getItem() instanceof BannerItem && (beTag != null && beTag.contains("Patterns") && !beTag.getList("Patterns",10).isEmpty()) && (!limitAmount || beTag.getList("Patterns",10).size() <= 6);
     }
     protected CustomCraftingIconHolder craftingButtonByList(Component displayName, List<ItemStack> itemStacks, Consumer<CustomCraftingIconHolder> updateRecipe){
         return new CustomCraftingIconHolder(itemStacks.get(0)){
@@ -318,6 +331,7 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
                 return 0;
             }
             void updateRecipe() {
+                scrollableRenderer.scrolled.set(0);
                 updateRecipe.accept(this);
             }
         };
@@ -367,8 +381,8 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
         if (infoType.get() <= 0) guiGraphics.drawString(this.font, this.playerInventoryTitle, imageWidth / 2 + (imageWidth / 2 - font.width(playerInventoryTitle)) / 2 - (is2x2 ? 10 : 0), 118, 0x383838, false);
         else {
             if (selectedCraftingButton < getCraftingButtons().size() && getCraftingButtons().get(selectedCraftingButton) instanceof RecipeIconHolder<?> h) {
-                if (infoType.get() == 1 && ScreenUtil.hasTip(h.getFocusedResult())) {
-                    List<FormattedCharSequence> l = font.split(ScreenUtil.getTip(h.getFocusedResult()), 152 - (is2x2 ? 12 : 0));
+                if (infoType.get() == 1 && LegacyTipManager.hasTip(h.getFocusedResult())) {
+                    List<FormattedCharSequence> l = font.split(LegacyTipManager.getTipComponent(h.getFocusedResult()), 152 - (is2x2 ? 12 : 0));
                     for (int i1 = 0; i1 < l.size(); i1++) {
                         if (i1 > 7) break;
                         guiGraphics.drawString(font, l.get(i1), imageWidth / 2 + (imageWidth / 2 - font.width(l.get(i1))) / 2 - (is2x2 ? 10 : 2), 118 + i1 * 12, CommonColor.INVENTORY_GRAY_TEXT.get(), false);
@@ -385,8 +399,10 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
                             ScreenUtil.iconHolderRenderer.itemHolder(180 - (is2x2 ? 30 : 0), 134 + 15 * i1, 14, 14, ing, false, Offset.ZERO).render(guiGraphics, i, j, 0);
                             guiGraphics.pose().pushPose();
                             guiGraphics.pose().translate(198 - (is2x2 ? 30 : 0), 138 + 15 * i1, 0);
-                            guiGraphics.pose().scale(2 / 3f, 2 / 3f, 2 / 3f);
-                            guiGraphics.drawString(font, ing.getHoverName(), 0, 0, CommonColor.INVENTORY_GRAY_TEXT.get(), false);
+                            Legacy4JClient.applyFontOverrideIf(minecraft.getWindow().getHeight() <= 720, LegacyIconHolder.MOJANGLES_11_FONT, b-> {
+                                if (!b) guiGraphics.pose().scale(2 / 3f, 2 / 3f, 2 / 3f);
+                                guiGraphics.drawString(font, ing.getHoverName(), 0, 0, CommonColor.INVENTORY_GRAY_TEXT.get(), false);
+                            });
                             guiGraphics.pose().popPose();
                         }
                     }
@@ -511,13 +527,14 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
                     if (i == InputConstants.KEY_X && groupTabList.selectedTab == 0){
                         infoType.add(1,true);
                         menu.inventoryActive = infoType.get() <= 0;
-                        ScreenUtil.playSimpleUISound(LegacyRegistries.FOCUS.get(),1.0f);
+                        ScreenUtil.playSimpleUISound(LegacyRegistries.FOCUS.get(),true);
                         return true;
                     }
                     return super.keyPressed(i, j, k);
                 }
 
                 protected void updateRecipeDisplay(RecipeHolder<CraftingRecipe> rcp) {
+                    scrollableRenderer.scrolled.set(0);
                     resultStack = getFocusedResult();
                     clearIngredients(ingredientsGrid);
                     if (rcp == null) return;
@@ -575,6 +592,7 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
     @Override
     public boolean mouseScrolled(double d, double e, double f, double g) {
         if (super.mouseScrolled(d, e, f, g)) return true;
+        if (scrollableRenderer.mouseScrolled(g)) return true;
         int scroll = (int)Math.signum(g);
         if (((craftingButtonsOffset.get() > 0 && scroll < 0) || (scroll > 0 && craftingButtonsOffset.max > 0)) && craftingButtonsOffset.add(scroll,false) != 0){
             repositionElements();
@@ -635,8 +653,9 @@ public class LegacyCraftingScreen extends AbstractContainerScreen<LegacyCrafting
     }
     public List<? extends LegacyIconHolder> getCraftingButtons(){
         return switch (groupTabList.selectedTab){
-            case 1 -> fireworkTabList.selectedTab == 0 ? fireworkStarButtons : fireworkTabList.selectedTab == 1 ? fireworkStarFadeButtons : fireworkButtons;
-            case 2 -> dyeTabList.selectedTab == 0 ? dyeArmorButtons : dyeTabList.selectedTab == 1 ? dyeItemButtons : dyeTabList.selectedTab == 2 ? dyeBannerButtons : decoratedPotButtons;
+            case 1 -> bannerTabList.selectedTab == 0 ? copyBannerButtons : decorateShieldButtons;
+            case 2 -> fireworkTabList.selectedTab == 0 ? fireworkStarButtons : fireworkTabList.selectedTab == 1 ? fireworkStarFadeButtons : fireworkButtons;
+            case 3 -> dyeTabList.selectedTab == 0 ? dyeArmorButtons : dyeTabList.selectedTab == 1 ? dyeItemButtons : decoratedPotButtons;
             default -> craftingButtons;
         };
     }

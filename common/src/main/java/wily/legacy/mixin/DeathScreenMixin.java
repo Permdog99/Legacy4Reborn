@@ -15,12 +15,15 @@ import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import wily.legacy.client.CommonColor;
 import wily.legacy.client.screen.ControlTooltip;
 import wily.legacy.client.screen.ExitConfirmationScreen;
+import wily.legacy.client.screen.LegacyLoadingScreen;
 import wily.legacy.util.ScreenUtil;
 
 import java.util.List;
@@ -48,6 +51,8 @@ public abstract class DeathScreenMixin extends Screen implements ControlTooltip.
     @Shadow private int delayTicker;
 
     private long screenInit = Util.getMillis();
+
+    private static final ResourceLocation MOJANG_11_FONT = new ResourceLocation("legacy", "default_11");
 
     protected DeathScreenMixin(Component component) {
         super(component);
@@ -83,14 +88,24 @@ public abstract class DeathScreenMixin extends Screen implements ControlTooltip.
         float alpha = Math.min((Util.getMillis() - screenInit) / 1200f,1.0f);
         guiGraphics.fill(0, 0, guiGraphics.guiWidth(),guiGraphics.guiHeight(), 3672076 | Mth.ceil(alpha * 160.0F) << 24);
     }
+
+    @Unique
+    public boolean isLatinOrEnglish() {
+        if (minecraft.options.languageCode.equals("en_us") || minecraft.options.languageCode.equals("en_au") || minecraft.options.languageCode.equals("en_ca") || minecraft.options.languageCode.equals("en_gb") || minecraft.options.languageCode.equals("en_nz") || minecraft.options.languageCode.equals("en_mx") || minecraft.options.languageCode.equals("pl_pl") || minecraft.options.languageCode.equals("pt_br") || minecraft.options.languageCode.equals("pt_pt")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     public void render(GuiGraphics guiGraphics, int i, int j, float f, CallbackInfo ci) {
         ci.cancel();
         renderBackground(guiGraphics,i,j,f);
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate((this.width - font.width(title) * 2) / 2f, height / 4f + 20,0);
+        guiGraphics.pose().translate((this.width - (isLatinOrEnglish() ? font.width(title.copy().withStyle(Style.EMPTY.withFont(MOJANG_11_FONT))) : font.width(title)) * 2) / 2f, height / 4f + 20,0);
         guiGraphics.pose().scale(2.0F, 2.0F, 2.0F);
-        ScreenUtil.drawOutlinedString(guiGraphics,this.font, this.title, 0,0, 16777215,0,0.5f);
+        ScreenUtil.drawOutlinedString(guiGraphics,this.font, isLatinOrEnglish() ? this.title.copy().withStyle(Style.EMPTY.withFont(MOJANG_11_FONT)) : this.title, 0,0, CommonColor.TITLE_TEXT.get(),0,0.5f);
         guiGraphics.pose().popPose();
         if (this.causeOfDeath != null) {
             guiGraphics.drawCenteredString(this.font, this.causeOfDeath, this.width / 2, height / 2 - 24, 16777215);

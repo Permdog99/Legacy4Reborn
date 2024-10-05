@@ -1,5 +1,6 @@
 package wily.legacy.mixin;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
@@ -34,7 +35,7 @@ public abstract class ScreenMixin extends AbstractContainerEventHandler {
 
     @Inject(method = "renderWithTooltip",at = @At("HEAD"))
     private void renderWithTooltip(GuiGraphics guiGraphics, int i, int j, float f, CallbackInfo ci){
-        LegacyTipManager.tipDiffPercentage = Math.max(-0.5f,Math.min(LegacyTipManager.tipDiffPercentage + (LegacyTipManager.getActualTip() == null ? -0.1f : 0.08f) * minecraft.getDeltaFrameTime(),1.5f));
+        LegacyTipManager.tipDiffPercentage = Math.max(-0.5f,Math.min(LegacyTipManager.tipDiffPercentage + (LegacyTipManager.getActualTip() == null ? -0.1f : 0.08f) * f,1.5f));
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(LegacyTipManager.getTipXDiff(),0,0);
     }
@@ -48,7 +49,7 @@ public abstract class ScreenMixin extends AbstractContainerEventHandler {
 
     @Inject(method = "changeFocus",at = @At("HEAD"))
     private void changeFocus(ComponentPath componentPath, CallbackInfo ci){
-        ScreenUtil.playSimpleUISound(LegacyRegistries.FOCUS.get(),1.0f);
+        ScreenUtil.playSimpleUISound(LegacyRegistries.FOCUS.get(),true);
     }
     @Inject(method = "onClose",at = @At("HEAD"))
     private void onClose(CallbackInfo ci){
@@ -62,7 +63,9 @@ public abstract class ScreenMixin extends AbstractContainerEventHandler {
     @Inject(method = "renderTransparentBackground",at = @At("HEAD"), cancellable = true)
     public void renderTransparentBackground(GuiGraphics graphics, CallbackInfo ci) {
         ci.cancel();
-        graphics.fillGradient(0,0,graphics.guiWidth(),graphics.guiHeight(), -1073741824, -805306368);
+        RenderSystem.enableBlend();
+        graphics.blit(ScreenUtil.MENU_BACKGROUND,0,0,0,0,graphics.guiWidth(),graphics.guiHeight(),graphics.guiWidth(),graphics.guiHeight());
+        RenderSystem.disableBlend();
     }
     @Inject(method = "hasShiftDown",at = @At("HEAD"), cancellable = true)
     private static void hasShiftDown(CallbackInfoReturnable<Boolean> cir){

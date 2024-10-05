@@ -22,6 +22,7 @@ import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -121,7 +122,7 @@ public abstract class MinecraftMixin {
             ci.cancel();
         }
         if (lastPlayerBlockUsePos != null){
-            if ((Math.abs(lastPlayerBlockUsePos.x - player.position().x) >= 1 || Math.abs(lastPlayerBlockUsePos.y - player.position().y) >= 1 || Math.abs(lastPlayerBlockUsePos.z - player.position().z) >= 1)) lastPlayerBlockUsePos = null;
+            if ((Math.abs(lastPlayerBlockUsePos.x - player.position().x) >= 1 || Math.abs(lastPlayerBlockUsePos.y - player.position().y) >= 1 || Math.abs(lastPlayerBlockUsePos.z - player.position().z) >= 1)) lastPlayerBlockUsePos = lastPlayerBlockUsePos.subtract(Mth.clamp(lastPlayerBlockUsePos.x - player.position().x,-1,1),Mth.clamp(lastPlayerBlockUsePos.y - player.position().y,-1,1), Mth.clamp(lastPlayerBlockUsePos.z - player.position().z,-1,1));
             else ci.cancel();
         }
     }
@@ -132,7 +133,7 @@ public abstract class MinecraftMixin {
     @Redirect(method = "startUseItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;useItemOn(Lnet/minecraft/client/player/LocalPlayer;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;"))
     private InteractionResult startUseItemReturn(MultiPlayerGameMode instance, LocalPlayer localPlayer, InteractionHand arg, BlockHitResult arg2){
         if (((LegacyOptions)options).legacyCreativeBlockPlacing().get() && rightClickDelay == 4 && player.getAbilities().instabuild && ControlTooltip.canPlace(self(),arg)) {
-            lastPlayerBlockUsePos = player.position();
+            if (lastPlayerBlockUsePos == null) lastPlayerBlockUsePos = player.position();
             rightClickDelay = 0;
         }
         if (level.getBlockState(arg2.getBlockPos()).getBlock() instanceof BedBlock || player.getAbilities().flying && player.isSprinting()) rightClickDelay = -1;
@@ -213,6 +214,7 @@ public abstract class MinecraftMixin {
         if (ScreenUtil.getLegacyOptions().autoResolution().get()){
             if (height == 1080) return 0.999623452;
             else if (height % 720 != 0) return 1.001d;
+
             return 1d;
         }
         return (1.125 - ScreenUtil.getLegacyOptions().interfaceResolution().get() / 4);
@@ -220,11 +222,15 @@ public abstract class MinecraftMixin {
     @Inject(method = "addInitialScreens", at = @At("HEAD"))
     private void addInitialScreens(List<Function<Runnable, Screen>> list, CallbackInfo ci) {
         list.add(r-> new ConfirmationScreen(new TitleScreen(),275,130,Component.empty(), Component.translatable("legacy.menu.autoSave_message")){
-            protected void initButtons() {
-                panel.y+=25;
-                messageYOffset = 68;
+            protected void addButtons() {
                 transparentBackground = false;
-                okButton = addRenderableWidget(Button.builder(Component.translatable("gui.ok"), b-> {if (okAction.test(b)) onClose();}).bounds(panel.x + (panel.width - 220) / 2, panel.y + panel.height - 40,220,20).build());
+                messageYOffset = 68;
+                renderableVList.addRenderable(okButton = Button.builder(Component.translatable("gui.ok"), b-> {if (okAction.test(b)) onClose();}).build());
+            }
+            @Override
+            public void renderableVListInit(){
+                panel.y+=25;
+                renderableVList.init(this,panel.x + (panel.width - 220) / 2, panel.y + panel.height - 40,220,0);
             }
 
             @Override

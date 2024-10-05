@@ -39,9 +39,6 @@ public class DimensionSpecialEffectsMixin {
             float k = (i - -0.0F) / (i <= 0.0F ? 0.2F : 0.4F) * 0.5F + 0.5F;
             float l = 1.0F - (1.0F - Mth.sin(k * 3.1415927F)) * 0.99F;
             l *= l;
-//            this.sunriseCol[0] = red;
-//            this.sunriseCol[1] = green;
-//            this.sunriseCol[2] = blue;
             this.sunriseCol[0] = k * red + red;
             this.sunriseCol[1] = k * k * red + 0.2F;
             this.sunriseCol[2] = k * k * blue + 0.2F;

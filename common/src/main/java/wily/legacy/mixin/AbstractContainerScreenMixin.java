@@ -3,6 +3,7 @@ package wily.legacy.mixin;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -21,6 +22,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import wily.legacy.Legacy4J;
 import wily.legacy.Legacy4JClient;
 import wily.legacy.client.CommonColor;
 import wily.legacy.client.LegacyTip;
@@ -29,8 +31,10 @@ import wily.legacy.client.screen.ControlTooltip;
 import wily.legacy.client.controller.ControllerBinding;
 import wily.legacy.client.screen.LegacyIconHolder;
 import wily.legacy.client.screen.LegacyMenuAccess;
+import wily.legacy.init.LegacyRegistries;
 import wily.legacy.util.ScreenUtil;
 
+import java.util.Comparator;
 import java.util.Set;
 
 @Mixin(AbstractContainerScreen.class)
@@ -65,6 +69,8 @@ public abstract class AbstractContainerScreenMixin extends Screen implements Leg
 
     @Shadow protected abstract void init();
 
+    @Shadow protected int imageHeight;
+
     @ModifyArg(method = "renderLabels", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;IIIZ)I"), index = 4)
     private int renderLabels(int i){
         return CommonColor.INVENTORY_GRAY_TEXT.get();
@@ -76,10 +82,24 @@ public abstract class AbstractContainerScreenMixin extends Screen implements Leg
             this.onClose();
             cir.setReturnValue(true);
         }
-        if (i == InputConstants.KEY_W && hoveredSlot != null && hoveredSlot.hasItem() && ScreenUtil.hasTip(hoveredSlot.getItem())) {
+        if (i == InputConstants.KEY_W && hoveredSlot != null && hoveredSlot.hasItem() && LegacyTipManager.hasTip(hoveredSlot.getItem())) {
             ScreenUtil.playSimpleUISound(SoundEvents.UI_BUTTON_CLICK.value(),1.0f);
             LegacyTipManager.setActualTip(new LegacyTip(hoveredSlot.getItem().copy()));
         }
+    }
+
+    public void movePointerToNextSlot(){
+        if (getMenu().slots.isEmpty() || Legacy4JClient.controllerManager.isCursorDisabled || getHoveredSlot() == null) return;
+        double pointerX = Legacy4JClient.controllerManager.getPointerX();
+        double pointerY = Legacy4JClient.controllerManager.getPointerY();
+        if (getMenu().slots.size() == 1 && movePointerToSlot(getMenu().slots.get(0))) return;
+        getMenu().slots.stream().min(Comparator.comparingInt(s->{
+            LegacyIconHolder holder = ScreenUtil.iconHolderRenderer.slotBounds(getMenuRectangle().left(),getMenuRectangle().top(),s);
+            double deltaX = pointerX - holder.getMiddleX();
+            double deltaY = pointerY - holder.getMiddleY();
+            return (int) (deltaX *deltaX + deltaY * deltaY);
+        })).ifPresent(this::movePointerToSlot);
+        if (!Legacy4J.isTU25()) ScreenUtil.playSimpleUISound(LegacyRegistries.FOCUS.get(),true);
     }
 
     @Inject(method = "mouseClicked", at = @At("RETURN"))
@@ -100,12 +120,18 @@ public abstract class AbstractContainerScreenMixin extends Screen implements Leg
     private void isHovering(Slot slot, double d, double e, CallbackInfoReturnable<Boolean> cir) {
         cir.setReturnValue(ScreenUtil.isHovering(slot,leftPos,topPos,d,e));
     }
+    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/inventory/Slot;isActive()Z", ordinal = 1))
+    private boolean render(Slot instance) {
+        hoveredSlot = instance;
+        return false;
+    }
     @Inject(method = "renderSlot", at = @At("HEAD"), cancellable = true)
     private void renderSlot(GuiGraphics graphics, Slot slot, CallbackInfo ci) {
         ci.cancel();
-        graphics.pose().pushPose();
         LegacyIconHolder holder = ScreenUtil.iconHolderRenderer.slotBounds(slot);
         holder.render(graphics, 0, 0, 0);
+        if (ScreenUtil.isHovering(slot,leftPos,topPos,Legacy4JClient.controllerManager.getPointerX(), Legacy4JClient.controllerManager.getPointerY()) && slot.isActive()) holder.renderHighlight(graphics);
+        graphics.pose().pushPose();
         holder.applyOffset(graphics);
         graphics.pose().translate(slot.x,slot.y,0);
         graphics.pose().scale(holder.getSelectableWidth() / 16f,holder.getSelectableHeight() / 16f,holder.getSelectableHeight() / 16f);
@@ -167,6 +193,14 @@ public abstract class AbstractContainerScreenMixin extends Screen implements Leg
         return InputConstants.isKeyDown(l,i) || Legacy4JClient.controllerManager.getButtonState(ControllerBinding.UP_BUTTON).released;
     }
 
+    @Inject(method = "onClose",at = @At("RETURN"))
+    public void removed(CallbackInfo ci) {
+        if (minecraft.player.getInventory().armor.stream().anyMatch(i-> !i.isEmpty())) {
+            ScreenUtil.animatedCharacterTime = Util.getMillis();
+            ScreenUtil.remainingAnimatedCharacterTime = 1500;
+        }
+    }
+
     @Override
     public Slot getHoveredSlot() {
         return hoveredSlot;
@@ -174,7 +208,7 @@ public abstract class AbstractContainerScreenMixin extends Screen implements Leg
 
     @Override
     public ScreenRectangle getMenuRectangle() {
-        return new ScreenRectangle(leftPos,topPos,width,height);
+        return new ScreenRectangle(leftPos,topPos,imageWidth,imageHeight);
     }
 
     @Redirect(method = "renderTooltip",at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;isEmpty()Z"))

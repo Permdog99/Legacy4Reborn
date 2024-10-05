@@ -18,6 +18,8 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import wily.legacy.Legacy4JClient;
@@ -129,5 +131,25 @@ public abstract class PlayerMixin extends LivingEntity implements PlayerYBobbing
 
     static {
         POSES_OLD = ImmutableMap.builder().put(Pose.STANDING, STANDING_DIMENSIONS).put(Pose.SLEEPING, SLEEPING_DIMENSIONS).put(Pose.FALL_FLYING, EntityDimensions.scalable(0.6F, 0.6F)).put(Pose.SWIMMING, EntityDimensions.scalable(0.6F, 0.6F)).put(Pose.SPIN_ATTACK, EntityDimensions.scalable(0.6F, 0.6F)).put(Pose.CROUCHING, EntityDimensions.scalable(0.6F, 1.8F)).put(Pose.DYING, EntityDimensions.fixed(0.2F, 0.2F)).build();
+    }
+
+    /**
+     * @author
+     * Permdog99
+     * @reason
+     * Change crouching eye level
+     */
+    @Overwrite
+    public float getStandingEyeHeight(Pose pose, EntityDimensions entityDimensions) {
+        switch (pose) {
+            case SWIMMING:
+            case FALL_FLYING:
+            case SPIN_ATTACK:
+                return 0.4F;
+            case CROUCHING:
+                return 1.55F;
+            default:
+                return 1.62F;
+        }
     }
 }

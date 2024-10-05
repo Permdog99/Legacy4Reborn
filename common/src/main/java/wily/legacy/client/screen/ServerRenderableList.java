@@ -108,6 +108,14 @@ public class ServerRenderableList extends RenderableVList {
     public boolean hasOnlineFriends(){
         return false;
     }
+    public void added(){
+    }
+    public void removed(){
+        if (lanServerDetector != null) {
+            lanServerDetector.interrupt();
+            lanServerDetector = null;
+        }
+    }
     private Component getMultiplayerDisabledReason() {
         if (this.minecraft.allowsMultiplayer()) {
             return null;
@@ -225,9 +233,9 @@ public class ServerRenderableList extends RenderableVList {
                         int u = mouseX - getX();
                         int v = mouseY - getY();
                         if (u < 32 && u > 16) {
-                            guiGraphics.blitSprite(LegacySprites.JOIN_HIGHLIGHTED, getX(), getY(), 32, 32);
+                            guiGraphics.blitSprite(LegacySprites.JOIN_HIGHLIGHTED, getX() + 5, getY() + 5, 20, 20);
                         } else {
-                            guiGraphics.blitSprite(LegacySprites.JOIN, getX(), getY(), 32, 32);
+                            guiGraphics.blitSprite(LegacySprites.JOIN, getX() + 5, getY() + 5, 20, 20);
                         }
                         if (index > 0) {
                             if (u < 16 && v < 16) {

@@ -25,7 +25,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import wily.legacy.Legacy4J;
 import wily.legacy.Legacy4JClient;
 import wily.legacy.client.LegacyOptions;
-import wily.legacy.client.LegacyWorldSettings;
+import wily.legacy.client.LegacyClientWorldSettings;
 
 import java.io.IOException;
 import java.net.Proxy;
@@ -34,8 +34,6 @@ import java.util.function.BooleanSupplier;
 @Mixin(IntegratedServer.class)
 public abstract class IntegratedServerMixin extends MinecraftServer {
     @Shadow @Final private Minecraft minecraft;
-
-    @Shadow public LanServerPinger lanPinger;
 
     @Shadow @Final private static Logger LOGGER;
 
@@ -52,48 +50,19 @@ public abstract class IntegratedServerMixin extends MinecraftServer {
             Legacy4JClient.manualSave = false;
             getProfiler().push("manualSave");
             LOGGER.info("Saving manually...");
-            this.saveEverything(false, false, true);
+            this.saveEverything(false, true, true);
             getProfiler().pop();
         }
     }
 
     @Redirect(method = "tickServer", at = @At(value = "FIELD", target = "Lnet/minecraft/client/server/IntegratedServer;paused:Z", opcode = Opcodes.GETFIELD, ordinal = 1))
     public boolean tickServer(IntegratedServer instance) {
-        return instance.isPaused() && ((LegacyOptions) minecraft.options).autoSaveInterval().get() > 0;
-    }
-    @Inject(method = "stopServer", at = @At(value = "HEAD"), cancellable = true)
-    public void stopServer(CallbackInfo ci) {
-        if (((LegacyOptions) minecraft.options).autoSaveInterval().get() == 0 && !Legacy4JClient.manualSave){
-            ci.cancel();
-            if (Legacy4JClient.deleteLevelWhenExitWithoutSaving){
-                try {
-                    storageSource.deleteLevel();
-                } catch (IOException e) {
-                    Legacy4J.LOGGER.warn(e.getMessage());
-                }
-            }
-            if (self().metricsRecorder.isRecording()) {
-                self().cancelRecordingMetrics();
-            }
-            self().getConnection().stop();
-            LOGGER.info("Stopping server");
-
-            try {
-                self().storageSource.close();
-            } catch (IOException iOException2) {
-                LOGGER.error("Failed to unlock level {}", self().storageSource.getLevelId(), iOException2);
-            }
-            if (this.lanPinger != null) {
-                this.lanPinger.interrupt();
-                this.lanPinger = null;
-            }
-        }
-        Legacy4JClient.deleteLevelWhenExitWithoutSaving = false;
+        return instance.isPaused() && ((LegacyOptions) minecraft.options).autoSaveWhenPaused().get() && ((LegacyOptions) minecraft.options).autoSaveInterval().get() > 0 && !minecraft.isDemo();
     }
 
     @Override
     public boolean isUnderSpawnProtection(ServerLevel serverLevel, BlockPos blockPos, Player player) {
-        if (!isSingleplayerOwner(player.getGameProfile()) && !((LegacyWorldSettings)worldData).trustPlayers()) return true;
+        if (!isSingleplayerOwner(player.getGameProfile()) && !((LegacyClientWorldSettings)worldData).trustPlayers()) return true;
         return super.isUnderSpawnProtection(serverLevel, blockPos, player);
     }
 }

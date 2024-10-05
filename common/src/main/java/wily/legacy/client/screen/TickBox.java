@@ -55,9 +55,11 @@ public class TickBox extends AbstractButton {
         RenderSystem.enableDepthTest();
         guiGraphics.blitSprite(SPRITES[isHoveredOrFocused() ? 1 : 0], this.getX(), this.getY(), 12, 12);
         if (selected) guiGraphics.blitSprite(TICK, this.getX(), this.getY(), 14, 12);
-        int k = isHoveredOrFocused() ? ScreenUtil.getDefaultTextColor() : CommonColor.INVENTORY_GRAY_TEXT.get();
         guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0F);
-        this.renderString(guiGraphics, minecraft.font, k);
+        guiGraphics.pose().pushPose();
+        if (!isHoveredOrFocused()) guiGraphics.pose().translate(0.5f,0.5f,0f);
+        this.renderString(guiGraphics, minecraft.font, isHoveredOrFocused() ? ScreenUtil.getDefaultTextColor() : CommonColor.INVENTORY_GRAY_TEXT.get());
+        guiGraphics.pose().popPose();
     }
 
 

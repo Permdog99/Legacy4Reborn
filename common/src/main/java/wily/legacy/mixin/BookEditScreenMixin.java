@@ -108,7 +108,7 @@ public abstract class BookEditScreenMixin extends Screen implements Controller.E
 
         @Override
         public boolean keyPressed(int i, int j, int k) {
-            if (CommonInputs.selected(i)){
+            if (KeyboardScreen.isOpenKey(i)){
                 minecraft.setScreen(new KeyboardScreen(()->this,BookEditScreenMixin.this));
                 return true;
             }
@@ -204,7 +204,7 @@ public abstract class BookEditScreenMixin extends Screen implements Controller.E
     @Inject(method = "tick", at = @At("RETURN"))
     public void tick(CallbackInfo ci) {
         super.tick();
-        if (getFocused() == null) setFocused(panel);
+        if (getFocused() == null || getFocused() instanceof PageButton) setFocused(panel);
     }
 
     @Inject(method = "render",at = @At("HEAD"), cancellable = true)
